@@ -15,8 +15,9 @@ class ItineraryTool:
         self.itinerary_api = ItineraryAPI()
         self.base_url = os.getenv("OPENAI_BASE_URL")
         self.api_key = os.getenv('OPENAI_API_KEY')
+        self.client_type = os.getenv('LLM_CLIENT_TYPE')
 
-        if client_type == "azure":
+        if self.client_type == "azure":
             self.client = AzureOpenAI(
                 api_key=os.getenv('OPENAI_API_KEY'),
                 azure_endpoint=os.getenv('OPENAI_BASE_URL'),
