@@ -164,10 +164,11 @@ def get_activities_by_group_type(group_type: str, location: str) -> List[str]:
 
 
 @track
-def get_activities_by_group_type_or_travel_theme(
+def get_activities_by_group_type_or_travel_theme_and_number_of_days(
     group_type: str, 
     travel_theme: str, 
-    destination: str
+    destination: str,
+    number_of_days: float
     ) -> List[str]:
     try:
         conn = psycopg2.connect(os.getenv('VECTOR_DB_URL'))
@@ -175,6 +176,9 @@ def get_activities_by_group_type_or_travel_theme(
 
         if not destination:
             return {"error": "Destination is required"}
+        
+        if number_of_days <= 0:
+            return {"error": "Number of days must be greater than 0"}
 
         # Get travel group ID (if provided)
         travel_group_id = None
@@ -197,12 +201,14 @@ def get_activities_by_group_type_or_travel_theme(
         destination_id = cursor.fetchone()
 
         if not destination_id:
-            # call LLM to create activities based on destination
+            # call LLM to create activities based on destination and days
             destination = destination.lower()
             system_prompt = """You are world class trip itinerary builder, 
             Your task is to suggest activities for the group_type, travel_theme and destination provided to you.
+            Each activity should have an estimated duration (0.5 for half day, 1 for full day).
+            Total duration of all activities should not exceed the number_of_days provided.
             Give maximum 5 activities only.
-            Create concise but efficient activities suggestion for a user and give user a would class experience.
+            Create concise but efficient activities suggestion for a user and give user a world class experience.
             """
             client = AzureOpenAI(
                 api_key=os.getenv('OPENAI_API_KEY'),
@@ -223,7 +229,8 @@ def get_activities_by_group_type_or_travel_theme(
                         "content": f"""create activities for a user based on this information,
                         "destination": {destination},
                         "group_type": {str(group_type)},
-                        "travel_theme": {str(travel_theme)}
+                        "travel_theme": {str(travel_theme)},
+                        "number_of_days": {number_of_days}
                         """
                     }
                 ],
@@ -234,7 +241,7 @@ def get_activities_by_group_type_or_travel_theme(
 
         destination_id = destination_id[0]
 
-        # Get must-travel activities specific to the destination
+        # Get all must-travel activities first (without LIMIT)
         must_travel_query = """
             SELECT 
                 mta.name AS activity_name, 
@@ -255,13 +262,12 @@ def get_activities_by_group_type_or_travel_theme(
             must_travel_query += " AND mtgt.travel_theme_id = %s"
             must_travel_params.append(travel_theme_id)
 
-        # Add ORDER BY and LIMIT clauses for top 2
-        must_travel_query += " ORDER BY mtgt.rating DESC LIMIT 2"
+        must_travel_query += " ORDER BY mtgt.rating DESC"
 
         cursor.execute(must_travel_query, tuple(must_travel_params))
         must_travel_activities = cursor.fetchall()
 
-        # Get recommended activities specific to the destination
+        # Get all recommended activities (without LIMIT)
         recommended_query = """
             SELECT 
                 rta.name AS activity_name, 
@@ -282,28 +288,47 @@ def get_activities_by_group_type_or_travel_theme(
             recommended_query += " AND rtgt.travel_theme_id = %s"
             recommended_params.append(travel_theme_id)
 
-        # Add ORDER BY and LIMIT clauses for top 2
-        recommended_query += " ORDER BY rtgt.rating DESC LIMIT 2"
+        recommended_query += " ORDER BY rtgt.rating DESC"
 
         cursor.execute(recommended_query, tuple(recommended_params))
         recommended_activities = cursor.fetchall()
 
-        activity_list = [
+        # Convert all activities to list of dicts for easier processing
+        all_activities = [
             {
                 "title": act[0],
                 "description": act[1],
                 "rating": act[2],
                 "activity_type": act[3],
                 "image": act[4],
-                "duration": act[5]
+                "duration": float(act[5])
             }
             for act in must_travel_activities + recommended_activities
         ]
 
+        # Sort activities by rating and type (must-travel first)
+        sorted_activities = sorted(
+            all_activities,
+            key=lambda x: (x["activity_type"] != "must", -x["rating"])
+        )
+
+        # Select activities that fit within the number of days
+        selected_activities = []
+        total_duration = 0.0
+
+        for activity in sorted_activities:
+            if total_duration + activity["duration"] <= number_of_days:
+                selected_activities.append(activity)
+                total_duration += activity["duration"]
+            
+            # Break if we've filled the days or reached 5 activities
+            if total_duration >= number_of_days or len(selected_activities) >= 5:
+                break
+
         cursor.close()
         conn.close()
 
-        return activity_list
+        return selected_activities
 
     except Exception as e:
         return {"error": str(e)}
