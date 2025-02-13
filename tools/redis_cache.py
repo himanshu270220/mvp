@@ -2,7 +2,10 @@ from redis import Redis
 from typing import Optional, Any
 import json
 from functools import wraps
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 class RedisCache:
     _instance = None
     
@@ -14,7 +17,7 @@ class RedisCache:
     def __init__(self):
         if not hasattr(self, 'client'):
             self.client = Redis(
-                host='localhost',
+                host=os.getenv('REDIS_HOST'),
                 port=6379,
                 db=0,
                 decode_responses=True
