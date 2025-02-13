@@ -1,6 +1,3 @@
-import openai
-from pydantic import BaseModel
-from typing import List, Optional
 import json, os
 import inspect
 from opik.integrations.openai import track_openai
