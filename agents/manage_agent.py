@@ -61,12 +61,11 @@ class ManagerAgent:
             ''',
             session_id=session_id,
             tools=[
-                ItineraryTool(client_type="azure").get_base_itinerary,
+                ItineraryTool().get_base_itinerary,
                 get_activities_by_activity_name,
                 get_activities_by_group_type_or_travel_theme, 
                 get_hotels_by_destination
             ],
-            client_type="azure"
         )
         return new_agent
 
@@ -77,7 +76,7 @@ class ManagerAgent:
         print("agent", agent.name)
         try:
             thread = agent.run(user_input)
-            return [ msg for msg in thread if msg['role'] != 'system' and msg['role'] != 'tool']
+            return [ msg for msg in thread if msg['role'] != 'system']
             
         except Exception as e:
             print(f"Error generating response: {e}")

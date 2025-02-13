@@ -167,15 +167,11 @@ def get_hotels_by_destination(
         # Format the results
         hotel_list = [
             {
-                "hotel_name": hotel[0],
+                "title": hotel[0],
                 "description": hotel[1],
-                "star_rating": hotel[2] if hotel[2] else None,
-                "hotel_rating": hotel[3] if hotel[3] else None,
-                "location": hotel[4],
-                "location_rating": hotel[5] if hotel[5] else None,
-                "destination": hotel[6],
-                "group_type": hotel[7],
-                "travel_theme": hotel[8]
+                "rating": hotel[2] if hotel[2] else 0,
+                "hotel_rating": hotel[3] if hotel[3] else 0,
+                "location": hotel[4],  
             }
             for hotel in hotels
         ]
@@ -184,6 +180,4 @@ def get_hotels_by_destination(
         cursor.close()
         conn.close()
 
-        return {
-            "hotels": hotel_list
-        }
+        return hotel_list

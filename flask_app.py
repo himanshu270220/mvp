@@ -19,11 +19,9 @@ def chat(chat_request):
         manager_agent = ManagerAgent()
         thread = manager_agent.generate_response(session_id, message)
 
-        chat_request['message'] = thread
-
         final_response = {
             'session_id': session_id,
-            'message': chat_request['message']
+            'message': thread
         }
 
         return {
@@ -33,7 +31,7 @@ def chat(chat_request):
                 'Access-Control-Allow-Methods': 'POST, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type'
             },
-            'body': json.dumps(final_response)
+            'body': final_response
         }
     except Exception as e:
         print(f'Error generating response: {str(e)}')
@@ -83,8 +81,8 @@ def handle_chat():
         result = chat(chat_request)
         
         # Extract response from chat result
-        response_body = json.loads(result['body'])
-        
+        response_body = result['body']
+
         return jsonify(response_body), result['statusCode'], result['headers']
         
     except json.JSONDecodeError:

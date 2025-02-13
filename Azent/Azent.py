@@ -22,7 +22,7 @@ class Agent:
             tools=[], 
             base_url=os.getenv("OPENAI_BASE_URL"),
             api_key=os.getenv('OPENAI_API_KEY'),
-            client_type="openai",
+            client_type=os.getenv('LLM_CLIENT_TYPE'),
     ):
 
         # Open AI client
@@ -120,7 +120,7 @@ class Agent:
         return [self.function_to_schema(tool) for tool in self.tools]
     
     @track
-    def run(self, query, response_format=None, max_tool_calls=5):
+    def run(self, query, response_format=None, max_tool_calls=1):
         """
         Run the agent with fixed tool calling sequence
         """
@@ -128,7 +128,6 @@ class Agent:
             self.thread.append({"role": "user", "content": query})
             
             if not self.tools:
-                # Simple completion without tools
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=self.thread,
@@ -140,13 +139,11 @@ class Agent:
                 self.save_thread()
                 return self.thread
 
-            # Handle completion with tools
             tool_schemas = self.tools_to_toolschema()
             tools_map = {tool.__name__: tool for tool in self.tools}
             tool_call_count = 0
             
             while tool_call_count < max_tool_calls:
-                # Make the API call
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=self.thread,
@@ -157,13 +154,12 @@ class Agent:
                 
                 message = response.choices[0].message
                 
-                # Always append the assistant message first
                 assistant_message = {
                     "role": "assistant",
-                    "content": message.content if message.content else None
+                    "content": message.content if message.content else None,
+                    "type": "text"
                 }
                 
-                # If there are tool calls, include them in the assistant message
                 if message.tool_calls:
                     assistant_message["tool_calls"] = [
                         {
@@ -179,11 +175,9 @@ class Agent:
                 
                 self.thread.append(assistant_message)
                 
-                # If no tool calls, we're done
                 if not message.tool_calls:
                     break
                 
-                # Process tool calls and add their responses
                 for tool_call in message.tool_calls:
                     if tool_call.function.name in tools_map:
                         try:
@@ -192,7 +186,8 @@ class Agent:
                                 "role": "tool",
                                 "tool_call_id": tool_call.id,
                                 "name": tool_call.function.name,
-                                "content": json.dumps(result) if result is not None else "{}"
+                                "content": json.dumps(result) if result is not None else "{}",
+                                "type": "json" if tool_call.function.name in ['get_activities_by_group_type_or_travel_theme', 'get_hotels_by_destination'] else "text"
                             }
                             self.thread.append(tool_response)
                         except Exception as e:
@@ -208,13 +203,6 @@ class Agent:
                         print(f"Warning: Tool {tool_call.function.name} not found!")
                 
                 tool_call_count += 1
-            
-            # Add warning if max tool calls reached
-            if tool_call_count >= max_tool_calls:
-                self.thread.append({
-                    "role": "assistant",
-                    "content": f"Warning: Reached maximum number of tool calls ({max_tool_calls})"
-                })
             
             self.save_thread()
             return self.thread
@@ -236,7 +224,6 @@ class Agent:
 
         function = message.tool_calls[0].function
 
-        # Getting the tool info from func_obj
         name = function.name
         args = json.loads(function.arguments)
 
@@ -246,7 +233,6 @@ class Agent:
     def run_pyd(self, query, pyd_model) -> dict:
         "This method is to use pydantic models for getting structured outputs"
 
-        # Prepare the thread by adding the user query to it
         self.thread.append({"role":"user","content":query})
 
         response = self.client.beta.chat.completions.parse(

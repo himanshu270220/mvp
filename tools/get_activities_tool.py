@@ -170,7 +170,6 @@ def get_activities_by_group_type_or_travel_theme(
     destination: str
     ) -> List[str]:
     try:
-        # Connect to PostgreSQL
         conn = psycopg2.connect(os.getenv('VECTOR_DB_URL'))
         cursor = conn.cursor()
 
@@ -290,18 +289,21 @@ def get_activities_by_group_type_or_travel_theme(
         recommended_activities = cursor.fetchall()
 
         activity_list = [
-            {"activity_name": act[0], "description": act[1], "rating": act[2], "activity_type": act[3], "activity_image_url": act[4], "activity_duration": act[5]}
+            {
+                "title": act[0],
+                "description": act[1],
+                "rating": act[2],
+                "activity_type": act[3],
+                "image": act[4],
+                "duration": act[5]
+            }
             for act in must_travel_activities + recommended_activities
         ]
 
-        # Close the connection
         cursor.close()
         conn.close()
 
-        # Return structured JSON response
-        return {
-            "activities": activity_list
-        }
+        return activity_list
 
     except Exception as e:
         return {"error": str(e)}
