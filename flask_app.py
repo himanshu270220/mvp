@@ -80,8 +80,19 @@ def handle_chat():
         
         result = chat(chat_request)
         
-        # Extract response from chat result
-        response_body = result['body']
+        response_body = result.get('body', {})
+        response_body_message = response_body.get('message', [])
+
+        if response_body_message:
+            last_message = response_body_message[-1]
+
+            if last_message.get('type') == "json" and last_message.get('content'):
+                try:
+                    json_response = json.loads(last_message['content'])
+                    response_body_message[-1]['content'] = json_response
+                except json.JSONDecodeError as e:
+                    print(f"JSON parsing error: {str(e)}")
+                    pass
 
         return jsonify(response_body), result['statusCode'], result['headers']
         

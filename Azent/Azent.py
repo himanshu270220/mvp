@@ -187,7 +187,7 @@ class Agent:
                                 "tool_call_id": tool_call.id,
                                 "name": tool_call.function.name,
                                 "content": json.dumps(result) if result is not None else "{}",
-                                "type": "json" if tool_call.function.name in ['get_activities_by_group_type_or_travel_theme', 'get_hotels_by_destination'] else "text"
+                                "type": "json" if tool_call.function.name in ['get_activities_by_group_type_or_travel_theme', 'get_hotels_by_destination', 'get_base_itinerary'] else "text"
                             }
                             self.thread.append(tool_response)
                         except Exception as e:

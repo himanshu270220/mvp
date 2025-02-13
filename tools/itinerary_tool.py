@@ -92,50 +92,59 @@ class ItineraryTool:
             
             it should be json in the following format:
             {{
-                "trip": {{
-                    "destination": "destination",
-                    "itinerary": [
-                        {{
-                            "day": 1,
-                            "hotel": {{
-                                "name": "hotel_name",
-                                "description": "hotel_description",
-                                "rating": 4.8
-                            }},
-                            "activities": [
-                                {{
-                                    "time": "08:00",
-                                    "activity": "Breakfast",
-                                    "acitivity_image_url": "activity_image_url",
-                                    "activity_duration": 60,
-                                    "details": "Try local specialties like XYZ"
-                                }},
-                                {{
-                                    "time": "10:00",
-                                    "activity": "abc",
-                                    "details": "Try local specialties like XYZ"
-                                }},
-                            ]
-                        }},
-                        {{
-                            "day": 2,
-                            "activities": [
-                                {{
-                                    "time": "08:00",
-                                    "activity": "Breakfast",
-                                    "details": "Try local specialties like XYZ"
-                                }},
-                            ]
-                        }}
-                    ],
-                    "exclusions": [
-                        "Visa on arrival fee",
-                        "Personal expenses",
-                        "Additional activities",
-                        "Tips for drivers and guides",
-                        "Meals not mentioned"
+                "name": "Paris Adventure Package",
+                "subtitle": "Experience the magic of Paris in 5 days",
+                "image": "https://example.com/paris-skyline.jpg",
+                "duration": 5,
+                "itinerary_detail": [
+                {
+                    "active": true,
+                    "description": "Day 1: Historical Paris Tour",
+                    "details": [
+                    {
+                        "type": "activity",
+                        "title": "Eiffel Tower Visit",
+                        "description": "Skip-the-line access to Paris's most iconic monument",
+                        "duration": "3 hours",
+                        "image": "<image_url>"
+                    },
+                    {
+                        "type": "hotel",
+                        "title": "Louvre Museum Tour",
+                        "description": "Guided tour of world's largest art museum",
+                        "rating": 4.9,
+                        "image": "https://example.com/louvre.jpg"
+                    }
                     ]
-                }}
+                },
+                {
+                    "active": false,
+                    "description": "Day 2: Artistic Montmartre",
+                    "details": [
+                    {
+                        "type": "activity",
+                        "title": "Sacré-Cœur Basilica",
+                        "description": "Visit the iconic white church with panoramic city views",
+                        "duration": "2 hours",
+                        "image": "<image_url>"
+                    },
+                    {
+                        "type": "activity",
+                        "title": "Place du Tertre",
+                        "description": "Experience the artist square and get your portrait drawn",
+                        "rating": 4.6,
+                        "image": "<image_url>"
+                    },
+                    {
+                        "type": "hotel",
+                        "title": "Louvre Museum Tour",
+                        "description": "Guided tour of world's largest art museum",
+                        "rating": 4.9,
+                        "image": "https://example.com/louvre.jpg"
+                    }
+                    ]
+                }
+                ]
             }}
             """
 
@@ -157,9 +166,12 @@ class ItineraryTool:
                     }
                 ],
                 temperature=0.6,
+                response_format={"type": "json_object"}
             )
             message = response.choices[0].message.content
-            return message
+            response = message.replace("```json\n", "").replace("\n```", "")
+            json_response = json.loads(response)
+            return json_response
         except Exception as e:
             print(f"Error getting itinerary: {str(e)}")
             return 'Error getting itinerary'
