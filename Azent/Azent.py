@@ -16,7 +16,7 @@ class Agent:
             instructions: str, 
             session_id=None,
             temperature=1,
-            tools=[], 
+            tools=[],
             base_url=os.getenv("OPENAI_BASE_URL"),
             api_key=os.getenv('OPENAI_API_KEY'),
             client_type=os.getenv('LLM_CLIENT_TYPE'),
@@ -54,8 +54,8 @@ class Agent:
 
         self.thread = self.redis_cache.get('conversation:' + self.session_id)
         if self.thread == None:
-            self.thread = [{"role":"system","content":self.instructions}]
-  
+            self.thread = [{"role":"system","content": self.instructions}]
+
     def function_to_schema(self,func) -> dict:
         type_map = {
             str: "string",
@@ -200,7 +200,7 @@ class Agent:
                         print(f"Warning: Tool {tool_call.function.name} not found!")
                 
                 tool_call_count += 1
-            
+
             self.save_thread()
             return self.thread
         

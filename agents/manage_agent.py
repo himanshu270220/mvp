@@ -28,7 +28,7 @@ class ManagerAgent:
                 - manager greets the user and ask for the name to make conversation more personalized. Don't ask name if user already provided it.
                 - manager asks for the user's preferences like destination, travel_theme, group_type, number_of_days, ask user once question at a time, don't ask multiple questions at once.
                 - when user gives travel_theme, group_type information and number_of_days info, then call <get_activities_by_group_type_or_travel_theme_and_number_of_days> tool to get the activities for the trip and just show the activities to the user.
-                - Once the acitivities is fetched, then call <get_hotels_by_location> tool to show the hotels for the trip and ask user to choose only one hotel. Don't ask user preferences for hotel like preference for accommodation.
+                - Once the activities is fetched, then call <get_hotels_by_location> tool to show the hotels for the trip and ask user to choose only one hotel. Don't ask user preferences for hotel like preference for accommodation.
                 - once manager has gathered all the information from the user, then call <get_base_itinerary> tool to get the base itinerary for the trip and ask user to confirm the itinerary.
                 - manager asks the user for any changes to the itinerary if user wants to change anything.
                 - manager can call <get_activities_by_activity_name> tool to get the activities for the trip if user wants to add new activities

@@ -6,8 +6,12 @@ import os
 from dotenv import load_dotenv
 from api.clients.itinerary_api import ItineraryAPI
 from tools.redis_cache import RedisCache
+import uuid
+import inspect
+import re
 
 load_dotenv()
+
 
 class ItineraryTool:
     def __init__(self, client_type="openai"):
@@ -60,14 +64,72 @@ class ItineraryTool:
         except Exception as e:
             print(f"Error getting itinerary: {str(e)}")
             return 'Error getting itinerary'
-    
+
+    def get_uuid(self):
+        return uuid.uuid4()
+
+    def function_to_schema(self, func) -> dict:
+        type_map = {
+            str: "string",
+            int: "integer",
+            float: "number",
+            bool: "boolean",
+            list: "array",
+            dict: "object",
+            type(None): "null",
+        }
+
+        try:
+            signature = inspect.signature(func)
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to get signature for function {func.__name__}: {str(e)}"
+            )
+
+        parameters = {}
+        for param in signature.parameters.values():
+            try:
+                param_type = type_map.get(param.annotation, "string")
+            except KeyError as e:
+                raise KeyError(
+                    f"Unknown type annotation {param.annotation} for parameter {param.name}: {str(e)}"
+                )
+            parameters[param.name] = {"type": param_type}
+
+        required = [
+            param.name
+            for param in signature.parameters.values()
+            if param.default == inspect._empty
+        ]
+
+        return {
+            "type": "function",
+            "function": {
+                "name": func.__name__,
+                "description": (func.__doc__ or "").strip(),
+                "parameters": {
+                    "type": "object",
+                    "properties": parameters,
+                    "required": required,
+                },
+            },
+        }
+
+
+    def execute_tool_call(self, tool_call, tools_map):
+        name = tool_call.function.name
+        args = json.loads(tool_call.function.arguments)
+
+        print(f"Assistant: {name}({args})")
+        return tools_map[name](**args)
+
     @track
     def get_base_itinerary(
-        self,
-        destination: str,
-        activities: any,
-        hotels: any,
-        number_of_days: int
+            self,
+            destination: str,
+            activities: any,
+            hotels: any,
+            number_of_days: int
     ):
         """
         Get base itinerary for a specific destination
@@ -89,61 +151,68 @@ class ItineraryTool:
             It is strictly important not to include another information part from what is provided to you about activities, hotel. Add nothing else.
             Don't include information like breakfast, lunch, dinner, etc. in the itinerary. Add activities only.
             Create concise but efficient trip itinerary for a user and give user a would class experience.
+            keep id as <uuid>
             
             it should be json in the following format:
             {{
+                "id": <uuid>
                 "name": "Paris Adventure Package",
                 "subtitle": "Experience the magic of Paris in 5 days",
                 "image": "https://example.com/paris-skyline.jpg",
                 "duration": 5,
                 "itinerary_detail": [
-                {
-                    "active": true,
+                {{
+            "active": true,
                     "description": "Day 1: Historical Paris Tour",
                     "details": [
-                    {
-                        "type": "activity",
+                    {{
+            "type": "activity",
+                        "id": <uuid>,
                         "title": "Eiffel Tower Visit",
                         "description": "Skip-the-line access to Paris's most iconic monument",
                         "duration": "3 hours",
                         "image": "<image_url>"
-                    },
-                    {
-                        "type": "hotel",
+                    }},
+                    {{
+            "type": "hotel",
+                        "id": <uuid>,
                         "title": "Louvre Museum Tour",
                         "description": "Guided tour of world's largest art museum",
                         "rating": 4.9,
                         "image": "https://example.com/louvre.jpg"
-                    }
+                    }}
                     ]
-                },
-                {
-                    "active": false,
+                }},
+                {{
+            "active": false,
                     "description": "Day 2: Artistic Montmartre",
                     "details": [
-                    {
-                        "type": "activity",
+                    {{
+            "type": "activity",
+                        "id": <uuid>,
                         "title": "Sacré-Cœur Basilica",
                         "description": "Visit the iconic white church with panoramic city views",
                         "duration": "2 hours",
                         "image": "<image_url>"
-                    },
-                    {
-                        "type": "activity",
+                    }},
+                    {{
+            "type": "activity",
+                        "id": <uuid>,
                         "title": "Place du Tertre",
                         "description": "Experience the artist square and get your portrait drawn",
                         "rating": 4.6,
                         "image": "<image_url>"
-                    },
-                    {
-                        "type": "hotel",
+                    }},
+                    {{
+            "type": "hotel",
+                        "id": <uuid>,
                         "title": "Louvre Museum Tour",
                         "description": "Guided tour of world's largest art museum",
                         "rating": 4.9,
                         "image": "https://example.com/louvre.jpg"
-                    }
+                    }}
                     ]
-                }
+                }}
                 ]
             }}
             """
@@ -166,16 +235,25 @@ class ItineraryTool:
                     }
                 ],
                 temperature=0.6,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
             )
             message = response.choices[0].message.content
+
             response = message.replace("```json\n", "").replace("\n```", "")
+            response = self.replace_with_uuid(response)
             json_response = json.loads(response)
             return json_response
         except Exception as e:
             print(f"Error getting itinerary: {str(e)}")
             return 'Error getting itinerary'
-    
+
+    @track
+    def replace_with_uuid(self, text):
+        try:
+            return re.sub(r"<id>", lambda _: str(uuid.uuid4()), text)
+        except Exception as e:
+            print(f"Error replacing itinerary: {str(e)}")
+
     @track
     async def add_changes_to_itinerary(self, user_id: str, itinerary_id: str, changes) -> bool:
         """
@@ -190,7 +268,7 @@ class ItineraryTool:
 
     @track
     def save_itinerary(self, user_id: str, itinerary_id: str, changes) -> bool:
-       
+
         try:
             self.itinerary_api.update_itinerary(changes, itinerary_id, user_id)
             return True
