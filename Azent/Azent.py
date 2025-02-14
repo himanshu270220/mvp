@@ -122,7 +122,7 @@ class Agent:
         Run the agent with fixed tool calling sequence
         """
         try:
-            self.thread.append({"role": "user", "content": query})
+            self.thread.append({"role": "user", "content": str(query)})
             
             if not self.tools:
                 response = self.client.chat.completions.create(
@@ -178,6 +178,7 @@ class Agent:
                 for tool_call in message.tool_calls:
                     if tool_call.function.name in tools_map:
                         try:
+                            print('calling tool: ', tool_call.function)
                             result = self.execute_tool_call(tool_call, tools_map)
                             tool_response = {
                                 "role": "tool",
