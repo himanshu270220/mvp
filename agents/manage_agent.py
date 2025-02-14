@@ -52,11 +52,8 @@ class ManagerAgent:
             Important notes:
                 - Ask one question at a time, for example, even if you have both activities and hotel related information, ask one question at a time specific to activities or hotel.
                 - Ask user very concise and specific question and also reply with concise answer if you can.
-                - You can provide user with brief summary of the itinerary and ask for the changes required.
-                - If user ask to add the activity, ask user which day they want to add the activity or extend the trip.
-                - User may need to add or update many things in the itinerary. If one thing is confirmed, still user may need to add or change other things, so keep asking user if anything else, it needs to be added or changed.
                 - If user don't want to add/change any more changes, then ask to confirm the Itinerary by asking "Shall I confirm the itinerary?"
-                - Use tools provided to you, only after the confirmation from the user.
+                - If user has choosen any option then don't confirm again and again.
             ''',
             session_id=session_id,
             tools=[
