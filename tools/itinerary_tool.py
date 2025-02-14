@@ -17,8 +17,8 @@ class ItineraryTool:
     def __init__(self, client_type="openai"):
         self.cache = RedisCache()
         self.itinerary_api = ItineraryAPI()
-        self.base_url = os.getenv("OPENAI_BASE_URL")
-        self.api_key = os.getenv('OPENAI_API_KEY')
+        self.base_url = os.getenv("LLM_BASE_URL")
+        self.api_key = os.getenv('LLM_API_KEY')
         self.client_type = os.getenv('LLM_CLIENT_TYPE')
 
         if self.client_type == "azure":
@@ -218,7 +218,7 @@ class ItineraryTool:
             """
 
             response = self.client.chat.completions.create(
-                model='gpt-4o',
+                model=os.getenv('ITINERARY_MODEL'),
                 messages=[
                     {
                         "role": "system",

@@ -5,10 +5,13 @@ from typing import Any, List, Tuple, Dict
 from dotenv import load_dotenv
 import psycopg2
 from Azent.Azent import Agent
-from openai import AzureOpenAI
+from openai import AzureOpenAI, OpenAI
 import os
 from opik.integrations.openai import track_openai
 from opik import track
+import json
+
+from Azent.SimpleAgent import SimpleAgent
 
 load_dotenv()
 
@@ -88,20 +91,20 @@ def get_activities_by_group_type(group_type: str, location: str) -> List[str]:
     cursor = conn.cursor()
 
     print("group_type", group_type)
-    openai_client = AzureOpenAI(
-        api_key=os.getenv('OPENAI_API_KEY'),
-        azure_deployment=os.getenv('AZURE_DEPLOYMENT'),
-        azure_endpoint='gpt-4o-mvp-dev',
-        azure_api_version='2024-02-15-preview'
-    )
-
-    response = openai_client.embeddings.create(
-        input=[f"group_type: {group_type}"],
-        model="text-embedding-ada-002"
-    )
-
-    query_embedding = response.data[0].embedding
-    query_vector_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+    # openai_client = AzureOpenAI(
+    #     api_key=os.getenv('OPENAI_API_KEY'),
+    #     azure_deployment=os.getenv('AZURE_DEPLOYMENT'),
+    #     azure_endpoint='gpt-4o-mvp-dev',
+    #     azure_api_version='2024-02-15-preview'
+    # )
+    #
+    # response = openai_client.embeddings.create(
+    #     input=[f"group_type: {group_type}"],
+    #     model="text-embedding-ada-002"
+    # )
+    #
+    # query_embedding = response.data[0].embedding
+    query_vector_str = "[" + ",".join(str(x) for x in []) + "]"
 
     # get location id
     cursor.execute(f"SELECT id FROM destination WHERE name ILIKE '{location}'")
@@ -202,46 +205,46 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
 
         if not destination_id:
             # call LLM to create activities based on destination and days
-            destination = destination.lower()
-            system_prompt = """You are world class trip itinerary builder, 
-            Your task is to suggest activities for the group_type, travel_theme and destination provided to you.
-            Each activity should have an estimated duration (0.5 for half day, 1 for full day).
-            Total duration of all activities should not exceed the number_of_days provided.
-            Give maximum 5 activities only.
-            Create concise but efficient activities suggestion for a user and give user a world class experience.
-            """
-            client = AzureOpenAI(
-                api_key=os.getenv('OPENAI_API_KEY'),
-                azure_endpoint=os.getenv('AZURE_DEPLOYMENT'),
-                azure_deployment='gpt-4o-mvp-dev',
-                api_version='2024-02-15-preview'
-            )
+            try:
+                destination = destination.lower()
+                trip_agent = SimpleAgent(
+                    base_url=os.getenv("LLM_API_URL"),
+                    api_key=os.getenv("LLM_API_KEY"),
+                    system_prompt="""You are world class trip itinerary builder, 
+                            Your task is to suggest activities for the group_type, travel_theme and destination provided to you.
+                            Each activity should have an estimated duration (0.5 for half day, 1 for full day).
+                            Total duration of all activities should not exceed the number_of_days provided.
+                            Create concise but efficient activities suggestion for a user and give user a world class experience.
+                            Return output in given JSON format:
+                            {{
+                                "activities": [
+                                    {{
+                                         "title": <title>,
+                                        "description": <description>,
+                                        "rating": <rating>,
+                                        "activity_type": <activity_type>,
+                                        "image": <image>,
+                                        "duration":<duration>
+                                    }}
+                                ]
+                            }}
+                            """,
+                    output_format={"type": "json_object"}
+                )
 
-            response = client.chat.completions.create(
-                model='gpt-4o',
-                messages=[
-                    {
-                        "role": "system",
-                        "content": system_prompt,
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""create activities for a user based on this information,
-                        "destination": {destination},
-                        "group_type": {str(group_type)},
-                        "travel_theme": {str(travel_theme)},
-                        "number_of_days": {number_of_days}
-                        """
-                    }
-                ],
-                temperature=0.6,
-            )
-            message = response.choices[0].message.content
-            return {"activities": message}
+                trip_response = trip_agent.execute(
+                    f"""create activities for a user based on this information,
+                    "destination": {destination},
+                    "group_type": "couple",
+                    "travel_theme": "culture",
+                    "number_of_days": 3"""
+                )
+                return trip_response['activities']
+            except Exception as e:
+                return []
 
         destination_id = destination_id[0]
 
-        # Get all must-travel activities first (without LIMIT)
         must_travel_query = """
             SELECT 
                 mta.name AS activity_name, 

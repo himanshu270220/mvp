@@ -17,8 +17,8 @@ class Agent:
             session_id=None,
             temperature=1,
             tools=[],
-            base_url=os.getenv("OPENAI_BASE_URL"),
-            api_key=os.getenv('OPENAI_API_KEY'),
+            base_url=os.getenv("LLM_BASE_URL"),
+            api_key=os.getenv('LLM_API_KEY'),
             client_type=os.getenv('LLM_CLIENT_TYPE'),
     ):
 

@@ -4,6 +4,7 @@ from tools.get_activities_tool import get_activities_by_activity_name, get_activ
 from tools.get_hotels_tool import get_hotels_by_destination
 from tools.itinerary_tool import ItineraryTool
 from opik import track
+import os
 
 class ManagerAgent:
     """Class to handle the conversation management using the custom Agent class"""
@@ -16,7 +17,7 @@ class ManagerAgent:
         """Get existing agent or create new one for the user"""
         new_agent = Agent(
             name='manager agent',
-            model="gpt-4o",
+            model=os.getenv('MANAGER_MODEL'),
             instructions=f'''
             You are a manager at world class travelling company.
             Your main goal is to help the user to have a customized itinerary for their trip. You will be provided with user information and available tools to help you with the task.

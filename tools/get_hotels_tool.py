@@ -9,11 +9,11 @@ import openai
 import os
 from opik.integrations.openai import track_openai
 from opik import track
-from openai import AzureOpenAI
+
+from Azent.SimpleAgent import SimpleAgent
 
 load_dotenv()
 
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 @track
 def get_hotels_by_destination(
@@ -86,39 +86,42 @@ def get_hotels_by_destination(
         cursor.execute("SELECT id FROM destination WHERE name ILIKE %s", (destination,))
         destination_id = cursor.fetchone()
         if not destination_id:
-            destination = destination.lower()
-            system_prompt = """You are world class trip itinerary builder, 
-                        Your task is to suggest hotels for the group_type, travel_theme and destination provided to you.
+            try:
+                destination = destination.lower()
+                trip_agent = SimpleAgent(
+                    base_url=os.getenv("LLM_API_URL"),
+                    api_key=os.getenv("LLM_API_KEY"),
+                    system_prompt="""You are world class trip itinerary builder, 
+                                        Your task is to suggest hotels for the group_type, travel_theme and destination provided to you.
 
-                        suggest concise but efficient hotels suggestion for a user and give user a would class experience.
-                        """
-            client = AzureOpenAI(
-                api_key=os.getenv('OPENAI_API_KEY'),
-                azure_endpoint=os.getenv('AZURE_DEPLOYMENT'),
-                azure_deployment='gpt-4o-mvp-dev',
-                api_version='2024-02-15-preview'
-            )
+                                        suggest concise but efficient hotels suggestion for a user and give user a would class experience.
+                                        return the response in given JSON format:
+                                        {{
+                                            "hotels": [
+                                                {{
+                                                    "title": <title>,
+                                                    "description": <description>,
+                                                    "rating": <rating>,
+                                                    "hotel_rating": <hotel_rating>,
+                                                    "location": <location>  
+                                                }}
+                                            ]
+                                        }}
+                                        """,
+                    output_format={"type": "json_object"}
+                )
 
-            response = client.chat.completions.create(
-                model='gpt-4o',
-                messages=[
-                    {
-                        "role": "system",
-                        "content": system_prompt,
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""suggest hotels for a user based on this information,
-                                    destination: {destination},
-                                    group_type: {str(group_type)},
-                                    travel_theme: {str(travel_theme)}
-                                    """
-                    }
-                ],
-                temperature=0.6,
-            )
-            message = response.choices[0].message.content
-            return {"hotels": message}
+                response = trip_agent.execute(
+                   f"""suggest hotels for a user based on this information,
+                    destination: {destination},
+                    group_type: {str(group_type)},
+                    travel_theme: {str(travel_theme)}
+                    """
+               )
+
+                return response['hotels']
+            except Exception as e:
+                return []
 
         destination_id = destination_id[0]
 
