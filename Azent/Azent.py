@@ -122,7 +122,7 @@ class Agent:
         Run the agent with fixed tool calling sequence
         """
         try:
-            self.thread.append({"role": "user", "content": query})
+            self.thread.append({"role": "user", "content": str(query)})
             
             if not self.tools:
                 response = self.client.chat.completions.create(
@@ -154,7 +154,8 @@ class Agent:
                 assistant_message = {
                     "role": "assistant",
                     "content": message.content if message.content else None,
-                    "type": "text"
+                    "type": "text",
+                    "agent_name": self.name,
                 }
                 
                 if message.tool_calls:
@@ -178,12 +179,14 @@ class Agent:
                 for tool_call in message.tool_calls:
                     if tool_call.function.name in tools_map:
                         try:
+                            print('calling tool: ', tool_call.function)
                             result = self.execute_tool_call(tool_call, tools_map)
                             tool_response = {
                                 "role": "tool",
                                 "tool_call_id": tool_call.id,
                                 "name": tool_call.function.name,
                                 "content": json.dumps(result) if result is not None else "{}",
+                                "agent_name": self.name,
                                 "type": "json" if tool_call.function.name in ['get_activities_by_group_type_or_travel_theme_and_number_of_days', 'get_hotels_by_destination', 'get_base_itinerary'] else "text"
                             }
                             self.thread.append(tool_response)

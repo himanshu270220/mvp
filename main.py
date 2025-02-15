@@ -1,6 +1,7 @@
+from agents.base_itinerary_agent import BaseItineraryAgent
+from agents.itinerary_editor_agent import ItineraryEditorAgent
 from flask import Flask, request, jsonify
 import json
-from agents.manage_agent import ManagerAgent
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -15,15 +16,26 @@ def chat(chat_request):
         print("session_id", chat_request['session_id'])
         message = chat_request['message']
         session_id = chat_request['session_id']
-        
-        manager_agent = ManagerAgent()
-        thread = manager_agent.generate_response(session_id, message)
+        intent = chat_request.get('intent', None)
 
-        chat_request['message'] = thread
+        if not intent:
+            return jsonify({
+                'error': 'Missing intent in request'
+            })
+        thread = []
+
+        if intent == 'base_itinerary':
+            manager_agent = BaseItineraryAgent()
+            thread = manager_agent.generate_response(session_id, message)
+
+        elif intent == 'edit_itinerary':
+            itinerary_editor_agent = ItineraryEditorAgent()
+            thread = itinerary_editor_agent.generate_response(session_id, message)
+        
 
         final_response = {
             'session_id': session_id,
-            'message': chat_request['message']
+            'message': thread
         }
 
         return {
@@ -33,7 +45,7 @@ def chat(chat_request):
                 'Access-Control-Allow-Methods': 'POST, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type'
             },
-            'body': json.dumps(final_response)
+            'body': final_response
         }
     except Exception as e:
         print(f'Error generating response: {str(e)}')
@@ -69,6 +81,7 @@ def handle_chat():
         # Validate required fields
         session_id = body.get('sessionID')
         msg_thread = body.get('msgThread')
+        intent = body.get('intent')
         
         if not session_id or not msg_thread:
             return jsonify({
@@ -77,14 +90,26 @@ def handle_chat():
             
         chat_request = {
             'message': msg_thread,
-            'session_id': session_id
+            'session_id': session_id,
+            'intent': intent
         }
         
         result = chat(chat_request)
         
-        # Extract response from chat result
-        response_body = json.loads(result['body'])
-        
+        response_body = result.get('body', {})
+        response_body_message = response_body.get('message', [])
+
+        if response_body_message:
+            last_message = response_body_message[-1]
+
+            if last_message.get('type') == "json" and last_message.get('content'):
+                try:
+                    json_response = json.loads(last_message['content'])
+                    response_body_message[-1]['content'] = json_response
+                except json.JSONDecodeError as e:
+                    print(f"JSON parsing error: {str(e)}")
+                    pass
+
         return jsonify(response_body), result['statusCode'], result['headers']
         
     except json.JSONDecodeError:

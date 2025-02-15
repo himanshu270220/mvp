@@ -4,19 +4,19 @@ from opik import track
 import json
 import os
 from dotenv import load_dotenv
-from api.clients.itinerary_api import ItineraryAPI
+
+from tools.get_activities_tool import get_activities_by_group_type_or_travel_theme_and_number_of_days
+from tools.get_hotels_tool import get_hotels_by_destination
 from tools.redis_cache import RedisCache
 import uuid
 import inspect
 import re
-
 load_dotenv()
 
 
 class ItineraryTool:
     def __init__(self, client_type="openai"):
         self.cache = RedisCache()
-        self.itinerary_api = ItineraryAPI()
         self.base_url = os.getenv("LLM_BASE_URL")
         self.api_key = os.getenv('LLM_API_KEY')
         self.client_type = os.getenv('LLM_CLIENT_TYPE')
@@ -33,37 +33,6 @@ class ItineraryTool:
                 base_url=self.base_url,
                 api_key=self.api_key,
             )
-
-    @track
-    def add_itinerary(self, destination: str, itinerary: list) -> bool:
-        """
-        Add a new itinerary for a destination
-        """
-        try:
-            self.itineraries[destination.lower()] = itinerary
-            return True
-        except Exception as e:
-            print(f"Error adding itinerary: {str(e)}")
-            return False
-
-    @track
-    def get_itinerary(self, destination: str, user_id: str) -> list:
-        """
-        Get itinerary for a specific destination
-        
-        Args:
-            destination: Name of the destination
-            
-        Returns:
-            list: Object of day-wise itinerary items if found, empty object otherwise
-        """
-        try:
-            exisiting_itinerary = self.itinerary_api.get_base_itinerary(destination.lower())
-            self.cache.set(user_id + '-' + exisiting_itinerary.get('itinerary_id', ''), exisiting_itinerary)
-            return f'base_itinerary: {json.dumps(exisiting_itinerary, indent=2)}'
-        except Exception as e:
-            print(f"Error getting itinerary: {str(e)}")
-            return 'Error getting itinerary'
 
     def get_uuid(self):
         return uuid.uuid4()
@@ -127,22 +96,40 @@ class ItineraryTool:
     def get_base_itinerary(
             self,
             destination: str,
-            activities: any,
-            hotels: any,
-            number_of_days: int
+            group_type: str,
+            travel_theme: str,
+            hote_star_rating: int,
+            number_of_days: float,
     ):
         """
         Get base itinerary for a specific destination
         
         Args:
             destination: Name of the destination
-            activities: List of activities
-            hotels: List of hotels
+            group_type: Type of the group
+            travel_theme: Name of the travel theme
             number_of_days: Number of days to plan for
             
         Returns:
             list: Object of day-wise itinerary items if found, empty object otherwise
         """
+
+        # get activities
+        activities = get_activities_by_group_type_or_travel_theme_and_number_of_days(
+            group_type=group_type,
+            travel_theme=travel_theme,
+            number_of_days=number_of_days,
+            destination=destination
+        )
+
+        # get hotels
+        hotels = get_hotels_by_destination(
+            destination=destination,
+            travel_theme=travel_theme,
+            group_type=group_type,
+            star_rating=hote_star_rating,
+        )
+
         try:
             system_prompt = """You are world class trip itinerary builder, 
             Your task is to create customized itinerary for a user based on the information provided to you about the destination,
@@ -253,25 +240,3 @@ class ItineraryTool:
             return re.sub(r"<id>", lambda _: str(uuid.uuid4()), text)
         except Exception as e:
             print(f"Error replacing itinerary: {str(e)}")
-
-    @track
-    async def add_changes_to_itinerary(self, user_id: str, itinerary_id: str, changes) -> bool:
-        """
-        Add changes to intermediate itinerary
-        """
-        try:
-            self.itinerary_api.update_itinerary(changes, itinerary_id, user_id)
-            return True
-        except Exception as e:
-            print(f"Error saving itinerary: {str(e)}")
-            return False
-
-    @track
-    def save_itinerary(self, user_id: str, itinerary_id: str, changes) -> bool:
-
-        try:
-            self.itinerary_api.update_itinerary(changes, itinerary_id, user_id)
-            return True
-        except Exception as e:
-            print(f"Error saving itinerary: {str(e)}")
-            return False
