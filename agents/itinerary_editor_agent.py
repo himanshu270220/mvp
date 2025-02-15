@@ -7,12 +7,16 @@ from tools.get_hotels_tool import get_hotels_by_destination
 from opik import track
 import os
 
+from tools.redis_cache import RedisCache
+
 
 class ItineraryEditorAgent:
     """Class to handle the conversation management using the custom Agent class"""
 
-    def __init__(self):
+    def __init__(self, package_id: str):
         load_dotenv()
+        self.redis_cache = RedisCache()
+        self.package = self.redis_cache.get(package_id)
 
     @track
     def get_or_create_agent(self, session_id: str) -> Agent:
@@ -20,7 +24,7 @@ class ItineraryEditorAgent:
         new_agent = Agent(
             name='base itinerary agent',
             model=os.getenv('ITINERARY_EDITOR_MODEL'),
-            instructions=get_itinerary_editor_prompt(session_id),
+            instructions=get_itinerary_editor_prompt(self.package),
             session_id=session_id,
             tools=[
                 get_activities_by_activity_name,
