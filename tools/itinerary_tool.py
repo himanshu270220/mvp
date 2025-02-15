@@ -229,6 +229,9 @@ class ItineraryTool:
             response = message.replace("```json\n", "").replace("\n```", "")
             response = self.replace_with_uuid(response)
             json_response = json.loads(response)
+
+            # save base_itinerary in redis cache
+            self.cache.set(json_response['id'], json_response)
             return json_response
         except Exception as e:
             print(f"Error getting itinerary: {str(e)}")
