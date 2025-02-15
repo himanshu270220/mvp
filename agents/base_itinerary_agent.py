@@ -1,8 +1,6 @@
 from dotenv import load_dotenv
 from Azent.Azent import Agent
-from tools.get_activities_tool import get_activities_by_activity_name, \
-    get_activities_by_group_type_or_travel_theme_and_number_of_days, get_group_types, get_travel_themes
-from tools.get_hotels_tool import get_hotels_by_destination
+from prompts.get_base_itinerary_editor_prompt import get_base_itinerary_prompt
 from tools.itinerary_tool import ItineraryTool
 from opik import track
 import os
@@ -20,41 +18,10 @@ class BaseItineraryAgent:
         new_agent = Agent(
             name='base itinerary agent',
             model=os.getenv('BASE_ITINERARY_MODEL'),
-            instructions=f'''
-            You are a itinerary creator at world class travelling company.
-            Your main goal is to help the user to have a customized itinerary for their trip. 
-            You will be provided with user information and available tools to help you with the task.
-            Call one tool at a time, don't call multiple tools at once.
-            Ask very specific question to the user, for example, user may not directly ask clear question,but you should ask question which are more action driven and user can directly answer without thinking much about it.
-            The overall workflow is as follows:
-                - User comes to the you
-                - Ask very specific question like where you want to go something like that.
-                - you greets the user and ask for the name to make conversation more personalized. Don't ask name if user already provided it.
-                - you asks for the user's preferences like destination, travel_theme, group_type, number_of_days, ask user once question at a time, don't ask multiple questions at once.
-                - once manager has gathered all the information from the user, then call <get_base_itinerary> tool to get the base itinerary for the trip and ask user to confirm the itinerary.
-
-            User Specific Information>:
-                session_id: {session_id}
-            
-            Itinerary attributes Information:
-                - Group Type: family only, friends, family with kids, friends with elderly, solo, couple.
-                - travel_theme: shopping, adventure and luxury
-
-            Available Tools:
-                - <get_base_itinerary> : call this tool only when user has confirmed all the options and you have information about activities and hotels.
-
-            Important notes:
-                - Ask one question at a time, for example, even if you have both activities and hotel related information, ask one question at a time specific to activities or hotel.
-                - Ask user very concise and specific question and also reply with concise answer if you can.
-                - If user don't want to add/change any more changes, then ask to confirm the Itinerary by asking "Shall I confirm the itinerary?"
-                - If user has chosen any option already, then don't confirm again and again by asking "does it sound good to you?"
-            ''',
+            instructions=get_base_itinerary_prompt(session_id),
             session_id=session_id,
             tools=[
-                ItineraryTool().get_base_itinerary,
-                get_activities_by_activity_name,
-                get_activities_by_group_type_or_travel_theme_and_number_of_days,
-                get_hotels_by_destination
+                ItineraryTool().get_base_itinerary
             ],
         )
         return new_agent
