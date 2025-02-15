@@ -1,10 +1,6 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-import gradio as gr
-from typing import Any, List, Tuple, Dict
+from typing import List
 from dotenv import load_dotenv
 import psycopg2
-from Azent.Azent import Agent
 import openai
 import os
 from opik.integrations.openai import track_openai
@@ -20,6 +16,7 @@ def get_hotels_by_destination(
         destination: str,
         group_type: str,
         travel_theme: str,
+        star_rating: int = 5,
         hotel_description: str = None
 ) -> List[str]:
     """
@@ -43,7 +40,7 @@ def get_hotels_by_destination(
         query_embedding = response.data[0].embedding
         query_vector_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
-        sql = """
+        sql = f"""
             SELECT 
                 h.id,
                 h.name,
@@ -54,7 +51,8 @@ def get_hotels_by_destination(
             JOIN location l ON h.location_id = l.id
             JOIN destination d ON l.destination_id = d.id
             WHERE 
-                (l.name ILIKE %s OR d.name ILIKE %s)
+                (h.star = {star_rating})
+                AND (l.name ILIKE %s OR d.name ILIKE %s)
                 AND -(h.embedding <#> %s::vector) > 0.85
             ORDER BY similarity DESC
             LIMIT 5;
@@ -125,7 +123,7 @@ def get_hotels_by_destination(
 
         destination_id = destination_id[0]
 
-        query = """
+        query = f"""
                     SELECT 
                         h.name AS hotel_name,
                         h.description AS hotel_description,
@@ -142,7 +140,7 @@ def get_hotels_by_destination(
                     JOIN destination d ON l.destination_id = d.id
                     LEFT JOIN travel_group tg ON lgt.travel_group_id = tg.id
                     LEFT JOIN travel_theme tt ON lgt.travel_theme_id = tt.id
-                    WHERE l.destination_id = %s
+                    WHERE l.destination_id = %s AND h.star = {star_rating}
                 """
 
         query_params = [destination_id]
