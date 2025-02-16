@@ -230,6 +230,13 @@ class ItineraryTool:
             response = self.replace_with_uuid(response)
             json_response = json.loads(response)
 
+            # check if json_response is array
+            if isinstance(json_response, list):
+                json_response = json_response[0]
+            
+            if 'id' not in json_response:
+                json_response['id'] = str(uuid.uuid4())
+            
             # save base_itinerary in redis cache
             self.cache.set(json_response['id'], json_response)
             return json_response
