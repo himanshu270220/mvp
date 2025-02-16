@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from azent.Azent import Agent
+from Azent.Azent import Agent
 from prompts.get_itinerary_editor_prompt import get_itinerary_editor_prompt
 from tools.get_activities_tool import get_activities_by_activity_name, \
     get_activities_by_group_type_or_travel_theme_and_number_of_days

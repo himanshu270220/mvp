@@ -1,14 +1,12 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from azent.SimpleAgent import SimpleAgent
-import gradio as gr
-from typing import Any, List, Tuple, Dict
+from Azent.SimpleAgent import SimpleAgent
+from typing import List
 from dotenv import load_dotenv
 import psycopg2
-from openai import AzureOpenAI, OpenAI
+from openai import AzureOpenAI
 import os
 from opik.integrations.openai import track_openai
 from opik import track
+from logger import logger
 
 
 load_dotenv()
@@ -16,152 +14,165 @@ load_dotenv()
 
 @track
 def get_activities_by_activity_name(acitivity: str, location: str) -> List[str]:
-    conn = psycopg2.connect(os.getenv("VECTOR_DB_URL"))
-    cursor = conn.cursor()
-    cursor = conn.cursor()
+    logger.info(f"Getting activities for activity: {acitivity} in location: {location}")
+    try:
+        conn = psycopg2.connect(os.getenv("VECTOR_DB_URL"))
+        logger.debug("Database connection established")
+        cursor = conn.cursor()
 
-    print("location", location)
-    openai_client = AzureOpenAI(
-        api_key=os.getenv('OPENAI_API_KEY'),
-        azure_deployment=os.getenv('AZURE_DEPLOYMENT'),
-        azure_endpoint='gpt-4o-mvp-dev',
-        azure_api_version='2024-02-15-preview'
-    )
+        logger.debug(f"Processing location: {location}")
+        openai_client = AzureOpenAI(
+            api_key=os.getenv('OPENAI_API_KEY'),
+            azure_deployment=os.getenv('AZURE_DEPLOYMENT'),
+            azure_endpoint='gpt-4o-mvp-dev',
+            azure_api_version='2024-02-15-preview'
+        )
 
-    response = openai_client.embeddings.create(
-        input=[f"{acitivity} in {location}"],
-        model="text-embedding-ada-002"
-    )
+        logger.debug("Generating embeddings for activity and location")
+        response = openai_client.embeddings.create(
+            input=[f"{acitivity} in {location}"],
+            model="text-embedding-ada-002"
+        )
 
-    query_embedding = response.data[0].embedding
-    query_vector_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+        query_embedding = response.data[0].embedding
+        query_vector_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
-    # get location id
-    cursor.execute(f"SELECT id FROM destination WHERE name ILIKE '{location}'")
-    row = cursor.fetchone()
-    location_id = row[0]
+        # get location id
+        cursor.execute(f"SELECT id FROM destination WHERE name ILIKE '{location}'")
+        row = cursor.fetchone()
+        location_id = row[0]
 
-    print("location_id", location_id)
+        logger.debug(f"Retrieved location_id: {location_id}")
 
-    threshold = 0.5  # Set your desired threshold
-    sql = """
-            SELECT 
-                id, 
-                name, 
-                description,
-                activity_image_url,
-                activity_duration,
-                -(embedding <#> %s::vector) as similarity
-            FROM must_travel_activity 
-            WHERE 
-                destination_id = %s 
-                AND -(embedding <#> %s::vector) > 0.85  -- Cosine similarity threshold
-            ORDER BY similarity DESC
-            LIMIT 5;
-        """
+        threshold = 0.5  # Set your desired threshold
+        sql = """
+                SELECT 
+                    id, 
+                    name, 
+                    description,
+                    activity_image_url,
+                    activity_duration,
+                    -(embedding <#> %s::vector) as similarity
+                FROM must_travel_activity 
+                WHERE 
+                    destination_id = %s 
+                    AND -(embedding <#> %s::vector) > 0.85  -- Cosine similarity threshold
+                ORDER BY similarity DESC
+                LIMIT 5;
+            """
 
-    cursor.execute(sql, (
-        query_vector_str,
-        location_id,
-        query_vector_str
-    ))
+        cursor.execute(sql, (
+            query_vector_str,
+            location_id,
+            query_vector_str
+        ))
 
-    rows = cursor.fetchall()
-    activities = []
+        rows = cursor.fetchall()
+        activities = []
 
-    for row in rows:
-        print(row)
-        activity_id = row[0]
-        activity_name = row[1]
-        activity_desc = row[2]
-        distance = row[3]
-        print(f"Activity: {activity_name}, Distance: {distance}")
-        activities.append(activity_name)
+        for row in rows:
+            activity_id = row[0]
+            activity_name = row[1]
+            activity_desc = row[2]
+            distance = row[3]
+            logger.debug(f"Found activity: {activity_name}, Distance: {distance}")
+            activities.append(activity_name)
 
-    cursor.close()
-    conn.close()
-    return activities
+        cursor.close()
+        conn.close()
+        logger.info(f"Successfully retrieved {len(activities)} activities")
+        return activities
+    except Exception as e:
+        logger.error(f"Error in get_activities_by_activity_name: {str(e)}", exc_info=True)
+        raise
 
 
 @track
 def get_activities_by_group_type(group_type: str, location: str) -> List[str]:
-    conn = psycopg2.connect(os.getenv("VECTOR_DB_URL"))
-    cursor = conn.cursor()
+    logger.info(f"Getting activities for group type: {group_type} in location: {location}")
+    try:
+        conn = psycopg2.connect(os.getenv("VECTOR_DB_URL"))
+        logger.debug("Database connection established")
+        cursor = conn.cursor()
 
-    print("group_type", group_type)
-    # openai_client = AzureOpenAI(
-    #     api_key=os.getenv('OPENAI_API_KEY'),
-    #     azure_deployment=os.getenv('AZURE_DEPLOYMENT'),
-    #     azure_endpoint='gpt-4o-mvp-dev',
-    #     azure_api_version='2024-02-15-preview'
-    # )
-    #
-    # response = openai_client.embeddings.create(
-    #     input=[f"group_type: {group_type}"],
-    #     model="text-embedding-ada-002"
-    # )
-    #
-    # query_embedding = response.data[0].embedding
-    query_vector_str = "[" + ",".join(str(x) for x in []) + "]"
+        logger.debug(f"Processing group type: {group_type}")
+        # openai_client = AzureOpenAI(
+        #     api_key=os.getenv('OPENAI_API_KEY'),
+        #     azure_deployment=os.getenv('AZURE_DEPLOYMENT'),
+        #     azure_endpoint='gpt-4o-mvp-dev',
+        #     azure_api_version='2024-02-15-preview'
+        # )
+        #
+        # response = openai_client.embeddings.create(
+        #     input=[f"group_type: {group_type}"],
+        #     model="text-embedding-ada-002"
+        # )
+        #
+        # query_embedding = response.data[0].embedding
+        query_vector_str = "[" + ",".join(str(x) for x in []) + "]"
 
-    # get location id
-    cursor.execute(f"SELECT id FROM destination WHERE name ILIKE '{location}'")
-    row = cursor.fetchone()
-    location_id = row[0]
+        # get location id
+        cursor.execute(f"SELECT id FROM destination WHERE name ILIKE '{location}'")
+        row = cursor.fetchone()
+        location_id = row[0]
 
-    print("location_id", location_id)
+        logger.debug(f"Retrieved location_id: {location_id}")
 
-    sql = """
-        WITH matching_groups AS (
+        sql = """
+            WITH matching_groups AS (
+                SELECT 
+                    id,
+                    name,
+                    -(embedding <#> %s::vector) as similarity
+                FROM travel_group
+                WHERE -(embedding <#> %s::vector) > 0.85
+                ORDER BY similarity DESC
+                LIMIT 3
+            )
             SELECT 
-                id,
-                name,
-                -(embedding <#> %s::vector) as similarity
-            FROM travel_group
-            WHERE -(embedding <#> %s::vector) > 0.85
-            ORDER BY similarity DESC
-            LIMIT 3
-        )
-        SELECT 
-            mta.id,
-            mta.name,
-            mta.description,
-            mtagt.rating,
-            mg.name as group_name,
-            mta.activity_image_url,
-            mta.activity_duration,
-            mg.similarity as group_similarity
-        FROM must_travel_activity mta
-        JOIN must_activity_group_theme mtagt ON mta.id = mtagt.must_travel_activity_id
-        JOIN matching_groups mg ON mtagt.travel_group_id = mg.id
-        WHERE mta.destination_id = %s
-        ORDER BY mg.similarity DESC, mtagt.rating DESC
-        LIMIT 5;
-    """
+                mta.id,
+                mta.name,
+                mta.description,
+                mtagt.rating,
+                mg.name as group_name,
+                mta.activity_image_url,
+                mta.activity_duration,
+                mg.similarity as group_similarity
+            FROM must_travel_activity mta
+            JOIN must_activity_group_theme mtagt ON mta.id = mtagt.must_travel_activity_id
+            JOIN matching_groups mg ON mtagt.travel_group_id = mg.id
+            WHERE mta.destination_id = %s
+            ORDER BY mg.similarity DESC, mtagt.rating DESC
+            LIMIT 5;
+        """
 
-    cursor.execute(sql, (
-        query_vector_str,
-        query_vector_str,
-        location_id
-    ))
-    rows = cursor.fetchall()
-    activities = []
+        cursor.execute(sql, (
+            query_vector_str,
+            query_vector_str,
+            location_id
+        ))
+        rows = cursor.fetchall()
+        activities = []
 
-    for row in rows:
-        id_ = row[0]
-        activity_name = row[1]
-        activity_desc = row[2]
-        rating = row[3]
-        group_name = row[4]
-        activity_image_url = row[5]
-        activity_duration = row[6]
+        for row in rows:
+            id_ = row[0]
+            activity_name = row[1]
+            activity_desc = row[2]
+            rating = row[3]
+            group_name = row[4]
+            activity_image_url = row[5]
+            activity_duration = row[6]
 
-        print(f"Activity: {activity_name}, Rating: {rating} for group: {group_name}")
-        activities.append(f"Activity: {activity_name}, Activity Description: {activity_desc}, Rating: {rating}, Activity Image URL: {activity_image_url}, Duration: {activity_duration}")
+            logger.debug(f"Found activity: {activity_name}, Rating: {rating} for group: {group_name}")
+            activities.append(f"Activity: {activity_name}, Activity Description: {activity_desc}, Rating: {rating}, Activity Image URL: {activity_image_url}, Duration: {activity_duration}")
 
-    cursor.close()
-    conn.close()
-    return activities
+        cursor.close()
+        conn.close()
+        logger.info(f"Successfully retrieved {len(activities)} activities")
+        return activities
+    except Exception as e:
+        logger.error(f"Error in get_activities_by_group_type: {str(e)}", exc_info=True)
+        raise
 
 
 @track
@@ -171,14 +182,18 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
     destination: str,
     number_of_days: float
     ) -> List[str]:
+    logger.info(f"Getting activities for group type: {group_type}, travel theme: {travel_theme}, destination: {destination}, days: {number_of_days}")
     try:
         conn = psycopg2.connect(os.getenv('VECTOR_DB_URL'))
+        logger.debug("Database connection established")
         cursor = conn.cursor()
 
         if not destination:
+            logger.warning("Destination is required but not provided")
             return {"error": "Destination is required"}
         
         if number_of_days <= 0:
+            logger.warning("Number of days must be greater than 0")
             return {"error": "Number of days must be greater than 0"}
 
         # Get travel group ID (if provided)
@@ -202,7 +217,7 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
         destination_id = cursor.fetchone()
 
         if not destination_id:
-            # call LLM to create activities based on destination and days
+            logger.info("Destination not found in database, falling back to LLM")
             try:
                 destination = destination.lower()
                 trip_agent = SimpleAgent(
@@ -237,8 +252,10 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
                     "travel_theme": "culture",
                     "number_of_days": 3"""
                 )
+                logger.info("Successfully generated activities using LLM")
                 return trip_response['activities']
             except Exception as e:
+                logger.error(f"Error generating activities with LLM: {str(e)}", exc_info=True)
                 return []
 
         destination_id = destination_id[0]
@@ -329,9 +346,11 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
         cursor.close()
         conn.close()
 
+        logger.info(f"Successfully retrieved {len(selected_activities)} activities within {number_of_days} days")
         return selected_activities
 
     except Exception as e:
+        logger.error(f"Error in get_activities_by_group_type_or_travel_theme_and_number_of_days: {str(e)}", exc_info=True)
         return {"error": str(e)}
 
 

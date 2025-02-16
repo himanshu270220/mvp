@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from azent.Azent import Agent
+from Azent.Azent import Agent
 from prompts.get_base_itinerary_editor_prompt import get_base_itinerary_prompt
 from tools.itinerary_tool import ItineraryTool
 from opik import track
