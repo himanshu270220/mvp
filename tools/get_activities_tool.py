@@ -1,17 +1,15 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from azent.SimpleAgent import SimpleAgent
 import gradio as gr
 from typing import Any, List, Tuple, Dict
 from dotenv import load_dotenv
 import psycopg2
-from Azent.Azent import Agent
 from openai import AzureOpenAI, OpenAI
 import os
 from opik.integrations.openai import track_openai
 from opik import track
-import json
 
-from Azent.SimpleAgent import SimpleAgent
 
 load_dotenv()
 

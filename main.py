@@ -77,7 +77,6 @@ def handle_chat():
     """
     Handle chat endpoint requests
     """
-    # Handle preflight OPTIONS request
     if request.method == 'OPTIONS':
         logger.info("Received OPTIONS request.")
         return '', 204
@@ -92,7 +91,6 @@ def handle_chat():
         body = request.get_json()
         logger.debug(f"Received request body: {body}")
         
-        # Validate required fields
         session_id = body.get('sessionID')
         msg_thread = body.get('msgThread')
         intent = body.get('intent')

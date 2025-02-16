@@ -6,7 +6,7 @@ import os
 from opik.integrations.openai import track_openai
 from opik import track
 
-from Azent.SimpleAgent import SimpleAgent
+from azent.SimpleAgent import SimpleAgent
 
 load_dotenv()
 
