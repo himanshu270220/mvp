@@ -4,9 +4,11 @@ from flask import Flask, request, jsonify
 import json
 from flask_cors import CORS
 from logger import logger
+from tools.redis_cache import RedisCache
 
 app = Flask(__name__)
 CORS(app)
+redis_cache = RedisCache()
 
 def chat(chat_request):
     """
@@ -141,6 +143,21 @@ def handle_chat():
         }), 500
 
 
+@app.route('/chat-history', methods=['GET'])
+def get_chat_history():
+   
+    session_id = request.args.get('sessionID')
+
+    if not session_id:
+        return jsonify({'error': 'sessionID is required'}), 400
+
+    # Fetch conversation from Redis
+    history = redis_cache.get('conversation:' + session_id)
+
+    if history is None:
+        return jsonify({'session_id': session_id, 'chat_history': []}), 200
+
+    return jsonify({'session_id': session_id, 'chat_history': history}), 200
 
 if __name__ == '__main__':
     logger.info("Starting Flask application.")
