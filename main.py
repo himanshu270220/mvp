@@ -145,19 +145,22 @@ def handle_chat():
 
 @app.route('/chat-history', methods=['GET'])
 def get_chat_history():
-   
-    session_id = request.args.get('sessionID')
+    
+    try:
+        session_id = request.args.get('sessionID')
 
-    if not session_id:
-        return jsonify({'error': 'sessionID is required'}), 400
+        if not session_id:
+            return jsonify({'error': 'sessionID is required'}), 400
 
-    # Fetch conversation from Redis
-    history = redis_cache.get('conversation:' + session_id)
+        history = redis_cache.get('conversation:' + session_id)
 
-    if history is None:
-        return jsonify({'session_id': session_id, 'chat_history': []}), 200
+        if history is None:
+            return jsonify({'session_id': session_id, 'chat_history': []}), 200
 
-    return jsonify({'session_id': session_id, 'chat_history': history}), 200
+        return jsonify({'session_id': session_id, 'chat_history': history}), 200
+    except Exception as e:
+        logger.error(f"Error getting chat history: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 if __name__ == '__main__':
     logger.info("Starting Flask application.")
