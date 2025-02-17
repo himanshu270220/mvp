@@ -22,6 +22,7 @@ class RedisCache:
                 db=0,
                 decode_responses=True
             )
+            print("Redis client initialized", self.client)
 
     def set(self, key: str, data: dict, expire_time: int = 3600) -> None:
         """Store itinerary data with expiration time"""
