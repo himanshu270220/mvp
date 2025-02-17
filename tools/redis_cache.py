@@ -20,7 +20,8 @@ class RedisCache:
                 host=os.getenv('REDIS_HOST'),
                 port=6379,
                 db=0,
-                decode_responses=True
+                decode_responses=True,
+                socket_timeout=10 
             )
             print("Redis client initialized", self.client)
 
