@@ -1,8 +1,8 @@
+import psycopg2
 from Azent.SimpleAgent import SimpleAgent
 from typing import List
 from dotenv import load_dotenv
-import psycopg2
-from openai import AzureOpenAI
+from openai import OpenAI
 import os
 from opik.integrations.openai import track_openai
 from opik import track
@@ -21,11 +21,9 @@ def get_activities_by_activity_name(acitivity: str, location: str) -> List[str]:
         cursor = conn.cursor()
 
         logger.debug(f"Processing location: {location}")
-        openai_client = AzureOpenAI(
-            api_key=os.getenv('OPENAI_API_KEY'),
-            azure_deployment=os.getenv('AZURE_DEPLOYMENT'),
-            azure_endpoint='gpt-4o-mvp-dev',
-            azure_api_version='2024-02-15-preview'
+        openai_client = OpenAI(
+            api_key=os.getenv('LLM_API_KEY'),
+            base_url=os.getenv('LLM_BASE_URL'),
         )
 
         logger.debug("Generating embeddings for activity and location")
@@ -37,14 +35,12 @@ def get_activities_by_activity_name(acitivity: str, location: str) -> List[str]:
         query_embedding = response.data[0].embedding
         query_vector_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
-        # get location id
         cursor.execute(f"SELECT id FROM destination WHERE name ILIKE '{location}'")
         row = cursor.fetchone()
         location_id = row[0]
 
         logger.debug(f"Retrieved location_id: {location_id}")
 
-        threshold = 0.5  # Set your desired threshold
         sql = """
                 SELECT 
                     id, 
@@ -52,12 +48,12 @@ def get_activities_by_activity_name(acitivity: str, location: str) -> List[str]:
                     description,
                     activity_image_url,
                     activity_duration,
-                    -(embedding <#> %s::vector) as similarity
+                    embedding <=> %s::vector as similarity  -- Using cosine distance operator
                 FROM must_travel_activity 
                 WHERE 
                     destination_id = %s 
-                    AND -(embedding <#> %s::vector) > 0.85  -- Cosine similarity threshold
-                ORDER BY similarity DESC
+                    AND embedding <=> %s::vector < 0.3  -- Cosine distance threshold (lower is better)
+                ORDER BY similarity ASC  -- Changed to ASC since we're using distance
                 LIMIT 5;
             """
 
@@ -196,7 +192,6 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
             logger.warning("Number of days must be greater than 0")
             return {"error": "Number of days must be greater than 0"}
 
-        # Get travel group ID (if provided)
         travel_group_id = None
         if group_type:
             cursor.execute("SELECT id FROM travel_group WHERE name ILIKE %s", (group_type,))
@@ -204,7 +199,6 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
             if result:
                 travel_group_id = result[0]
 
-        # Get travel theme ID (if provided)
         travel_theme_id = None
         if travel_theme:
             cursor.execute("SELECT id FROM travel_theme WHERE name ILIKE %s", (travel_theme,))
@@ -212,7 +206,6 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
             if result:
                 travel_theme_id = result[0]
 
-        # Get destination ID
         cursor.execute("SELECT id FROM destination WHERE name ILIKE %s", (destination,))
         destination_id = cursor.fetchone()
 
@@ -324,13 +317,11 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
             for act in must_travel_activities + recommended_activities
         ]
 
-        # Sort activities by rating and type (must-travel first)
         sorted_activities = sorted(
             all_activities,
             key=lambda x: (x["activity_type"] != "must", -x["rating"])
         )
 
-        # Select activities that fit within the number of days
         selected_activities = []
         total_duration = 0.0
 
@@ -339,7 +330,6 @@ def get_activities_by_group_type_or_travel_theme_and_number_of_days(
                 selected_activities.append(activity)
                 total_duration += activity["duration"]
             
-            # Break if we've filled the days or reached 5 activities
             if total_duration >= number_of_days or len(selected_activities) >= 5:
                 break
 

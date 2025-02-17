@@ -37,7 +37,6 @@ class Agent:
             )
 
         self.redis_cache = RedisCache()
-        # Agent Attributes
         self.name = name
         self.model = model
         self.instructions = instructions
@@ -45,9 +44,7 @@ class Agent:
         self.tools = tools
         self.session_id = session_id
 
-        # if tools provided then create a tool map {tool name: tool object}
         if self.tools != []:
-            # Creating a tool map
             self.tools_map = {tool.__name__: tool for tool in self.tools}
         
         self.temp = temperature
@@ -112,8 +109,6 @@ class Agent:
         return tools_map[name](**args)
 
     def tools_to_toolschema(self) -> list:
-        # for tool in self.tools:
-        #     print(tool)
         return [self.function_to_schema(tool) for tool in self.tools]
     
     @track
@@ -187,7 +182,7 @@ class Agent:
                                 "name": tool_call.function.name,
                                 "content": json.dumps(result) if result is not None else "{}",
                                 "agent_name": self.name,
-                                "type": "json" if tool_call.function.name in ['get_activities_by_group_type_or_travel_theme_and_number_of_days', 'get_hotels_by_destination', 'get_base_itinerary'] else "text"
+                                "type": "json" if tool_call.function.name in ['get_activities_by_group_type_or_travel_theme_and_number_of_days', 'get_hotels_by_destination', 'get_base_itinerary'] else 'json-button' if tool_call.function.name in ['get_activities_by_activity_name'] else 'text'
                             }
                             self.thread.append(tool_response)
                         except Exception as e:
