@@ -13,10 +13,10 @@ from tools.redis_cache import RedisCache
 class ItineraryEditorAgent:
     """Class to handle the conversation management using the custom Agent class"""
 
-    def __init__(self, package_id: str):
+    def __init__(self, itinerary_id: str):
         load_dotenv()
         self.redis_cache = RedisCache()
-        self.package = self.redis_cache.get(package_id)
+        self.package = self.redis_cache.get(itinerary_id)
 
     @track
     def get_or_create_agent(self, session_id: str) -> Agent:
