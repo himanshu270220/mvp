@@ -5,6 +5,7 @@ import json
 import os
 from dotenv import load_dotenv
 
+from prompts import get_update_itinerary_prompt
 from tools.get_activities_tool import get_activities_by_group_type_or_travel_theme_and_number_of_days
 from tools.get_hotels_tool import get_hotels_by_destination
 from tools.redis_cache import RedisCache
@@ -15,11 +16,12 @@ load_dotenv()
 
 
 class ItineraryTool:
-    def __init__(self, client_type="openai"):
+    def __init__(self, itinerary_id=None, client_type="openai"):
         self.cache = RedisCache()
         self.base_url = os.getenv("LLM_BASE_URL")
         self.api_key = os.getenv('LLM_API_KEY')
         self.client_type = os.getenv('LLM_CLIENT_TYPE')
+        self.itinerary_id = itinerary_id
 
         if self.client_type == "azure":
             self.client = AzureOpenAI(
@@ -137,6 +139,7 @@ class ItineraryTool:
             activities will have duration as well, so adjust the itinerary accordingly. Make sure, not to distribute same activities in different days. If you think something can not be accomodated, then add it to the exclusions.
             It is strictly important not to include another information part from what is provided to you about activities, hotel. Add nothing else.
             Don't include information like breakfast, lunch, dinner, etc. in the itinerary. Add activities only.
+            Use only one hotel for all the days. Don't add any extra information.
             Create concise but efficient trip itinerary for a user and give user a would class experience.
             keep id as <uuid>
             
@@ -230,14 +233,12 @@ class ItineraryTool:
             response = self.replace_with_uuid(response)
             json_response = json.loads(response)
 
-            # check if json_response is array
             if isinstance(json_response, list):
                 json_response = json_response[0]
             
             if 'id' not in json_response:
                 json_response['id'] = str(uuid.uuid4())
             
-            # save base_itinerary in redis cache
             self.cache.set(json_response['id'], json_response)
             return json_response
         except Exception as e:
@@ -250,3 +251,60 @@ class ItineraryTool:
             return re.sub(r"<id>", lambda _: str(uuid.uuid4()), text)
         except Exception as e:
             print(f"Error replacing itinerary: {str(e)}")
+
+    def get_update_itinerary_prompt(self, current_itinerary):
+        return f"""
+            You are a personal itinerary customization agent.
+            Your task is to help modify this user's specific itinerary according to their preferences.
+        
+            Current User Itinerary:
+            {current_itinerary} 
+        
+            Important guidelines:
+                - Preserve user's previous customizations when possible
+                - Maintain consistent style in descriptions
+                - Consider logical flow of activities
+        
+            return the updated itinerary in the same format as the current itinerary in json format.
+        """
+
+    def update_itinerary(self,
+                         user_changes,
+    ):
+        try:
+            base_itinerary = self.cache.get(self.itinerary_id)
+
+            response = self.client.chat.completions.create(
+                model=os.getenv('UPDATE_ITINERARY_MODEL'),
+                messages=[
+                    {
+                        "role": "system",
+                        "content": self.get_update_itinerary_prompt(json.dumps(base_itinerary, indent=2)),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""create itinerary for a user based on this information,
+                        {user_changes}
+                        """
+                    }
+                ],
+                temperature=0.6,
+                response_format={"type": "json_object"},
+            )
+
+            message = response.choices[0].message.content
+
+            response = message.replace("```json\n", "").replace("\n```", "")
+            json_response = json.loads(response)
+
+            if isinstance(json_response, list):
+                json_response = json_response[0]
+            
+            if 'id' not in json_response:
+                json_response['id'] = str(uuid.uuid4())
+            
+            self.cache.set(json_response['id'], json_response)
+            return json_response
+        except Exception as e:
+            print(f"Error getting itinerary: {str(e)}")
+            return 'Error getting itinerary'
