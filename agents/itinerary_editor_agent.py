@@ -19,19 +19,21 @@ class ItineraryEditorAgent:
         self.redis_cache = RedisCache()
         self.package = self.redis_cache.get(itinerary_id)
         self.itinerary_id = itinerary_id
+        self.name = 'itinerary_editor_agent'
 
     @track
     def get_or_create_agent(self, session_id: str) -> Agent:
         """Get existing agent or create new one for the user"""
         try:
             new_agent = Agent(
-                name='itinerary editor agent',
+                name=self.name,
                 model=os.getenv('ITINERARY_EDITOR_MODEL'),
                 instructions=get_itinerary_editor_prompt(self.package),
                 session_id=session_id,
                 tools=[
                     get_hotels,
-                    ItineraryTool(itinerary_id=self.itinerary_id).update_itinerary
+                    ItineraryTool(itinerary_id=self.itinerary_id).update_itinerary,
+                    get_activities_by_activity_name
                 ],
             )
             return new_agent
