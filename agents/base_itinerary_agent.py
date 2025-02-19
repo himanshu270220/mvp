@@ -15,16 +15,20 @@ class BaseItineraryAgent:
     @track
     def get_or_create_agent(self, session_id: str) -> Agent:
         """Get existing agent or create new one for the user"""
-        new_agent = Agent(
-            name='base itinerary agent',
-            model=os.getenv('BASE_ITINERARY_MODEL'),
-            instructions=get_base_itinerary_prompt(session_id),
-            session_id=session_id,
-            tools=[
-                ItineraryTool().get_base_itinerary
-            ],
-        )
-        return new_agent
+        try:
+            new_agent = Agent(
+                name='base itinerary agent',
+                model=os.getenv('BASE_ITINERARY_MODEL'),
+                instructions=get_base_itinerary_prompt(session_id),
+                session_id=session_id,
+                tools=[
+                    ItineraryTool().get_base_itinerary
+                ],
+            )
+            return new_agent
+        except Exception as e:
+            print(e)
+            raise e
 
     @track
     def generate_response(self, session_id: str, user_input: str) -> str:

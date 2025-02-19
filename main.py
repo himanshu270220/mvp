@@ -171,6 +171,9 @@ def get_chat_history():
         if history is None:
             return jsonify({'session_id': session_id, 'chat_history': []}), 200
 
+        # remove system_prompt from history
+        history = [msg for msg in history if msg['role'] != 'system']
+
         return jsonify({'session_id': session_id, 'chat_history': history}), 200
     except Exception as e:
         logger.error(f"Error getting chat history: {str(e)}", exc_info=True)

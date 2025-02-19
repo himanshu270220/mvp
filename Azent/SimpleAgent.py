@@ -72,7 +72,6 @@ class SimpleAgent:
         response = self.client.chat.completions.create(**completion_args)
         content = response.choices[0].message.content
 
-        # If JSON output was requested, parse the response
         if self.output_format and self.output_format.get("type") == "json_object":
             clean_response = content.replace('json', '').replace('```', '')
             return json.loads(clean_response)
