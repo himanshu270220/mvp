@@ -49,9 +49,14 @@ class Agent:
         
         self.temp = temperature
 
-        self.thread = self.redis_cache.get('conversation:' + self.session_id)
+        self.thread = self.redis_cache.get(self.name + self.session_id)
+        self.overall_thread = self.redis_cache.get('conversation:' + self.session_id)
+
         if self.thread == None:
             self.thread = [{"role":"system","content": self.instructions}]
+
+        if self.overall_thread == None:
+            self.overall_thread = [{"role":"system","content": self.instructions}]
 
     def function_to_schema(self,func) -> dict:
         type_map = {
@@ -118,6 +123,7 @@ class Agent:
         """
         try:
             self.thread.append({"role": "user", "content": str(query)})
+            self.overall_thread.append({"role": "user", "content": str(query)})
             
             if not self.tools:
                 response = self.client.chat.completions.create(
@@ -128,8 +134,9 @@ class Agent:
                 )
                 message = response.choices[0].message.content
                 self.thread.append({"role": "assistant", "content": str(message)})
+                self.overall_thread.append({"role": "assistant", "content": str(message)})
                 self.save_thread()
-                return self.thread
+                return self.overall_thread
 
             tool_schemas = self.tools_to_toolschema()
             tools_map = {tool.__name__: tool for tool in self.tools}
@@ -167,6 +174,7 @@ class Agent:
                     ]
                 
                 self.thread.append(assistant_message)
+                self.overall_thread.append(assistant_message)
                 
                 if not message.tool_calls:
                     break
@@ -182,9 +190,10 @@ class Agent:
                                 "name": tool_call.function.name,
                                 "content": json.dumps(result) if result is not None else "{}",
                                 "agent_name": self.name,
-                                "type": "json" if tool_call.function.name in ['get_activities_by_group_type_or_travel_theme_and_number_of_days', 'get_hotels_by_destination', 'get_base_itinerary'] else 'json-button' if tool_call.function.name in ['get_activities_by_activity_name'] else 'text'
+                                "type": "json" if tool_call.function.name in ['get_activities_by_group_type_or_travel_theme_and_number_of_days', 'get_hotels_by_destination', 'get_base_itinerary', 'update_itinerary'] else 'json-button' if tool_call.function.name in ['get_activities_by_activity_name', 'get_hotels'] else 'text'
                             }
                             self.thread.append(tool_response)
+                            self.overall_thread.append(tool_response)
                         except Exception as e:
                             print(f"Tool execution error: {str(e)}")
                             tool_response = {
@@ -194,23 +203,22 @@ class Agent:
                                 "content": json.dumps({"error": str(e)})
                             }
                             self.thread.append(tool_response)
+                            self.overall_thread.append(tool_response)
                     else:
                         print(f"Warning: Tool {tool_call.function.name} not found!")
                 
                 tool_call_count += 1
 
             self.save_thread()
-            return self.thread
+            return self.overall_thread
         
         except Exception as e:
             print('Exception occurred:', e)
             raise
-        
-    def get_thread(self):
-        return self.thread
     
     def save_thread(self):
-        self.redis_cache.set('conversation:' + self.session_id, self.thread)
+        self.redis_cache.set(self.name + self.session_id, self.thread)
+        self.redis_cache.set('conversation:' + self.session_id, self.overall_thread)
 
     def call_function(self,resp):
         "This method is used to call the tool from the llms response"
@@ -229,6 +237,7 @@ class Agent:
         "This method is to use pydantic models for getting structured outputs"
 
         self.thread.append({"role":"user","content":query})
+        self.overall_thread.append({"role":"user","content":query})
 
         response = self.client.beta.chat.completions.parse(
                 model=self.model,
