@@ -11,13 +11,14 @@ class BaseItineraryAgent:
 
     def __init__(self):
         load_dotenv()
+        self.name = 'base_itinerary'
 
     @track
     def get_or_create_agent(self, session_id: str) -> Agent:
         """Get existing agent or create new one for the user"""
         try:
             new_agent = Agent(
-                name='base itinerary agent',
+                name=self.name,
                 model=os.getenv('BASE_ITINERARY_MODEL'),
                 instructions=get_base_itinerary_prompt(session_id),
                 session_id=session_id,

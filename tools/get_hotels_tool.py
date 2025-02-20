@@ -343,24 +343,24 @@ def get_hotels(
             destination_id = destination_id[0]
 
             query = f"""
-                            SELECT 
-                                h.name AS hotel_name,
-                                h.description AS hotel_description,
-                                h.star AS hotel_star,
-                                h.rating AS hotel_rating,
-                                l.name AS location_name,
-                                lgt.rating AS location_rating,
-                                d.name AS destination_name,
-                                tg.name AS group_name,
-                                tt.name AS theme_name
-                            FROM hotel h
-                            JOIN location l ON h.location_id = l.id
-                            JOIN location_group_theme lgt ON l.id = lgt.location_id
-                            JOIN destination d ON l.destination_id = d.id
-                            LEFT JOIN travel_group tg ON lgt.travel_group_id = tg.id
-                            LEFT JOIN travel_theme tt ON lgt.travel_theme_id = tt.id
-                            WHERE l.destination_id = %s
-                        """
+            SELECT DISTINCT ON (h.id)
+                h.name AS hotel_name,
+                h.description AS hotel_description,
+                h.star AS hotel_star,
+                h.rating AS hotel_rating,
+                l.name AS location_name,
+                lgt.rating AS location_rating,
+                d.name AS destination_name,
+                tg.name AS group_name,
+                tt.name AS theme_name
+            FROM hotel h
+            JOIN location l ON h.location_id = l.id
+            JOIN location_group_theme lgt ON l.id = lgt.location_id
+            JOIN destination d ON l.destination_id = d.id
+            LEFT JOIN travel_group tg ON lgt.travel_group_id = tg.id
+            LEFT JOIN travel_theme tt ON lgt.travel_theme_id = tt.id
+            WHERE l.destination_id = %s
+            """
 
             query_params = [destination_id]
 
@@ -377,10 +377,11 @@ def get_hotels(
 
             query += """ 
                     ORDER BY 
-                    lgt.rating DESC,
-                    h.rating DESC
+                        h.id,                -- Must come first with DISTINCT ON
+                        lgt.rating DESC,
+                        h.rating DESC
                     LIMIT 5
-                """
+                    """
 
             cursor.execute(query, tuple(query_params))
             hotels = cursor.fetchall()
