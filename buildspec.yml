@@ -1,0 +1,38 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+      python: 3.8
+    commands:
+      - echo Installing Node.js dependencies...
+      - npm i -f
+  pre_build:
+    commands:
+      - echo Installing project dependencies...
+      - npm install
+      - echo Setting up Python virtual environment...
+      - python3 -m venv venv
+      - source venv/bin/activate
+      - pip install -r requirements.txt
+  build:
+    commands:
+      - echo Building the Angular application...
+      - ng build --configuration production --aot --build-optimizer --vendor-chunk=true
+  post_build:
+    commands:
+      - echo "Packaging build artifacts..."
+      - mkdir -p artifact
+      - cp -r dist/* artifact/
+      - cp appspec.yml artifact/
+      - echo "Running Python application..."
+      - python main.py
+
+artifacts:
+  files:
+    - appspec.yml
+    - before_scripts.sh
+    - after_scripts.sh
+    - artifact/**/*
+
