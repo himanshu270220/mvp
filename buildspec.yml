@@ -3,26 +3,30 @@ version: 0.2
 phases:
   pre_build:
     commands:
+      - echo "Checking if before_script.sh exists..."
+      - ls -l HT2.0-RAG/ || { echo "HT2.0-RAG/ directory missing"; exit 1; }
+      - echo "Setting execute permission for before_script.sh..."
+      - chmod +x HT2.0-RAG/before_script.sh || { echo "Failed to set permissions"; exit 1; }
       - echo "Running before_script.sh..."
-      - chmod +x scripts/before_script.sh
-      - ./scripts/before_script.sh
+      - ./HT2.0-RAG/before_script.sh || { echo "before_script.sh execution failed"; exit 1; }
 
-    build:
+  build:
     commands:
       - echo "Creating Python virtual environment..."
-      - python3 -m venv venv || { echo "Virtual environment creation failed"; exit 1; }
-      - ls -l venv/  # Debugging step to verify venv exists
-      - echo "Activating virtual environment..."
-      - source venv/bin/activate || { echo "Failed to activate virtual environment"; exit 1; }
+      - python3 -m venv venv
+      - source venv/bin/activate
       - echo "Installing dependencies..."
       - pip install --upgrade pip
-      - pip install -r requirements.txt || { echo "Dependency installation failed"; exit 1; }
+      - pip install -r requirements.txt
 
   post_build:
     commands:
+      - echo "Checking if after_scripts.sh exists..."
+      - ls -l HT2.0-RAG/ || { echo "HT2.0-RAG/ directory missing"; exit 1; }
+      - echo "Setting execute permission for after_scripts.sh..."
+      - chmod +x HT2.0-RAG/after_scripts.sh || { echo "Failed to set permissions"; exit 1; }
       - echo "Running after_scripts.sh..."
-      - chmod +x scripts/after_scripts.sh
-      - ./scripts/after_scripts.sh || { echo "Post-deployment script failed"; exit 1; }
+      - ./HT2.0-RAG/after_scripts.sh || { echo "after_scripts.sh execution failed"; exit 1; }
       - echo "Build and deployment steps completed."
 
 artifacts:
