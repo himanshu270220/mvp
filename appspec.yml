@@ -3,7 +3,7 @@ version: 0.0
 os: linux
 files:
   - source: /dist
-    destination: /var/www/html/RAGHT2.0/
+    destination: /var/www/html/HT2.0-RAG/
 file_exists_behavior: OVERWRITE
 
 hooks:
