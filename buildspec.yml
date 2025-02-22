@@ -3,8 +3,12 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo "Running before_script.sh..."
-      - if [ -f scripts/before_script.sh ]; then chmod +x scripts/before_script.sh; fi
+      - echo "Checking if scripts/before_script.sh exists..."
+      - ls -l scripts/  # List files in scripts directory
+      - if [ -f scripts/before_script.sh ]; then echo "File exists"; else echo "File does not exist"; exit 1; fi
+      - echo "Setting execute permission for before_script.sh..."
+      - chmod +x scripts/before_script.sh
+      - ls -l scripts/  # Verify permissions after chmod
       - ./scripts/before_script.sh
 
   build:
