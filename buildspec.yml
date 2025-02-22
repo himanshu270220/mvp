@@ -1,22 +1,14 @@
----
 version: 0.2
 
 phases:
   pre_build:
     commands:
-      - echo "Checking if scripts/before_script.sh exists..."
-      - ls -R  # List all directories
-      - |
-        if [ -f scripts/before_script.sh ]; then
-          echo "File exists";
-        else
-          echo "File does not exist";
-          exit 1;
-        fi
+      - echo "Checking if before_script.sh exists in the current directory..."
+      - ls -l  # List all files to debug
+      - if [ -f before_script.sh ]; then echo "before_script.sh found"; else echo "before_script.sh missing"; exit 1; fi
       - echo "Setting execute permission for before_script.sh..."
-      - chmod +x scripts/before_script.sh
-      - ls -l scripts/  # Verify permissions
-      - ./scripts/before_script.sh
+      - chmod +x before_script.sh
+      - ./before_script.sh
 
   build:
     commands:
@@ -26,17 +18,17 @@ phases:
       - echo "Installing dependencies..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
-      - deactivate  # Deactivate venv
+      - deactivate  # Deactivate venv after installation
 
   post_build:
     commands:
-      - echo "Running after_scripts.sh..."
-      - chmod +x scripts/after_scripts.sh
-      - ./scripts/after_scripts.sh
+      - echo "Checking if after_scripts.sh exists..."
+      - ls -l  # List all files to debug
+      - if [ -f after_scripts.sh ]; then chmod +x after_scripts.sh; fi
+      - ./after_scripts.sh
       - echo "Build and deployment steps completed."
 
 artifacts:
   files:
     - '**/*'
-    - 'scripts/**'
-  discard-paths: false
+  discard-paths: no
