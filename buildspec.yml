@@ -4,7 +4,7 @@ phases:
   pre_build:
     commands:
       - echo "Running before_script.sh..."
-      - chmod +x scripts/before_script.sh
+      - if [ -f scripts/before_script.sh ]; then chmod +x scripts/before_script.sh; fi
       - ./scripts/before_script.sh
 
   build:
@@ -15,11 +15,12 @@ phases:
       - echo "Installing dependencies..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
+      - deactivate  # Deactivate venv after installation
 
   post_build:
     commands:
       - echo "Running after_scripts.sh..."
-      - chmod +x scripts/after_scripts.sh
+      - if [ -f scripts/after_scripts.sh ]; then chmod +x scripts/after_scripts.sh; fi
       - ./scripts/after_scripts.sh
       - echo "Build and deployment steps completed."
 
