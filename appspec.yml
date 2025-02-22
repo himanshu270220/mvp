@@ -1,3 +1,4 @@
+---
 version: 0.0
 os: linux
 files:
@@ -10,6 +11,7 @@ hooks:
     - location: scripts/before_script.sh
       timeout: 300
       runas: root
+
   ApplicationStop:
     - location: scripts/after_scripts.sh
       timeout: 300
