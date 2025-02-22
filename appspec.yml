@@ -4,11 +4,13 @@ files:
   - source: /dist
     destination: /var/www/html/RAGHT2.0/
 file_exists_behavior: OVERWRITE
-BeforeInstall:
-  - location: /before_script.sh
-    timeout: 300
-    runas: root
-ApplicationStop:
-  - location: /after_script.sh
-    timeout: 300
-    runas: root
+
+hooks:
+  BeforeInstall:
+    - location: scripts/before_script.sh
+      timeout: 300
+      runas: root
+  ApplicationStop:
+    - location: scripts/after_scripts.sh
+      timeout: 300
+      runas: root
