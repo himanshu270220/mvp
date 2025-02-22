@@ -7,11 +7,12 @@ phases:
       - chmod +x scripts/before_script.sh
       - ./scripts/before_script.sh
 
-  build:
+    build:
     commands:
       - echo "Creating Python virtual environment..."
       - python3 -m venv venv || { echo "Virtual environment creation failed"; exit 1; }
       - ls -l venv/  # Debugging step to verify venv exists
+      - echo "Activating virtual environment..."
       - source venv/bin/activate || { echo "Failed to activate virtual environment"; exit 1; }
       - echo "Installing dependencies..."
       - pip install --upgrade pip
