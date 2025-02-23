@@ -20,10 +20,12 @@ phases:
       - pip install --upgrade pip setuptools wheel
       - pip install -r requirements.txt || { echo "Dependency installation failed"; exit 1; }
 
-  post_build:
+    post_build:
     commands:
+      - echo "Checking available files..."
+      - ls -l
       - echo "Ensuring after_script.sh is executable..."
-      - chmod +x ./after_script.sh || { echo "Failed to set permissions for after_script.sh"; exit 1; }
+      - chmod +x after_script.sh || { echo "Failed to set permissions for after_script.sh"; exit 1; }
       - echo "Running after_script.sh..."
       - ./after_script.sh || { echo "after_script.sh execution failed"; exit 1; }
       - echo "Build and deployment steps completed."

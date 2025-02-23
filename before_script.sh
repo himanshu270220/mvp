@@ -12,4 +12,3 @@ echo "Removing old application files..."
 rm -rf /var/www/html/RAGHT2.0/*
 
 echo "Before Install Script Completed."
-
