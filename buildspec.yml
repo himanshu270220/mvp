@@ -2,32 +2,29 @@ version: 0.2
 
 phases:
   pre_build:
-  commands:
-    - echo "Installing Python 3 virtual environment..."
-    - python3 -m venv venv || { echo "Failed to create venv"; exit 1; }
-    - ls -l venv  # Debugging step
+    commands:
+      - echo "Checking Python version..."
+      - python3 --version || { echo "Python3 not found"; exit 1; }
+      - echo "Creating virtual environment..."
+      - python3 -m venv venv || { echo "Failed to create venv"; exit 1; }
+      - echo "Fixing permissions for venv..."
+      - chmod -R 755 venv
 
   build:
-  commands:
-    - echo "Checking current directory..."
-    - ls -l
-    - echo "Checking venv directory..."
-    - ls -l venv || { echo "venv directory not found"; exit 1; }
-    - echo "Activating virtual environment..."
-    - source venv/bin/activate || { echo "Failed to activate venv"; exit 1; }
-
-    post_build:
     commands:
-      - echo "Checking available files..."
-      - ls -l
-      - echo "Ensuring after_script.sh is executable..."
-      - chmod +x after_script.sh || { echo "Failed to set permissions for after_script.sh"; exit 1; }
-      - echo "Running after_script.sh..."
+      - echo "Activating virtual environment..."
+      - bash -c "source venv/bin/activate" || { echo "Failed to activate venv"; exit 1; }
+      - echo "Installing dependencies..."
+      - pip install --upgrade pip
+      - pip install -r requirements.txt
+
+  post_build:
+    commands:
+      - echo "Restarting application..."
+      - chmod +x after_script.sh
       - ./after_script.sh || { echo "after_script.sh execution failed"; exit 1; }
-      - echo "Build and deployment steps completed."
 
 artifacts:
   files:
     - '**/*'
   discard-paths: no
-
