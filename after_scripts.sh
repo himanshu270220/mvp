@@ -1,8 +1,10 @@
 #!/bin/bash
-set -e  # Exit immediately on error
+set -e  # Exit if any command fails
 
-echo "Restarting Apache server..."
-sudo systemctl restart apache2.service || { echo "Apache restart failed"; exit 1; }
+echo "Running After Install Script..."
 
-echo "Deployment successful."
+# Restart Apache (if using Apache as a reverse proxy)
+echo "Restarting Apache..."
+systemctl restart apache2
 
+echo "After Install Script Completed."

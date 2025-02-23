@@ -3,10 +3,9 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo "Checking available directories in build environment..."
-      - ls -l || echo "Root directory listing failed"
-      - echo "Ensuring target directory exists..."
-      - mkdir -p RAGHT2.0  # Create directory if it doesn't exist
+      - echo "Checking available directories..."
+      - ls -l
+      - echo "Ensuring before_script.sh is executable..."
       - chmod +x before_script.sh || { echo "Failed to set permissions"; exit 1; }
       - echo "Running before_script.sh..."
       - ./before_script.sh || { echo "before_script.sh execution failed"; exit 1; }
@@ -22,10 +21,10 @@ phases:
 
   post_build:
     commands:
-      - echo "Ensuring after_scripts.sh is executable..."
-      - chmod +x after_scripts.sh || { echo "Failed to set permissions"; exit 1; }
-      - echo "Running after_scripts.sh..."
-      - ./after_scripts.sh || { echo "after_scripts.sh execution failed"; exit 1; }
+      - echo "Ensuring after_script.sh is executable..."
+      - chmod +x after_script.sh || { echo "Failed to set permissions"; exit 1; }
+      - echo "Running after_script.sh..."
+      - ./after_script.sh || { echo "after_script.sh execution failed"; exit 1; }
       - echo "Build and deployment steps completed."
 
 artifacts:

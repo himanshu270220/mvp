@@ -1,18 +1,26 @@
----
 version: 0.0
 os: linux
 files:
-  - source: /dist
-    destination: /var/www/html/HT2.0-RAG/
-file_exists_behavior: OVERWRITE
+  - source: /
+    destination: /var/www/html/RAGHT2.0
 
 hooks:
   BeforeInstall:
-    - location: scripts/before_script.sh
+    - location: before_script.sh
       timeout: 300
-      runas: root
+      runas: ubuntu
+
+  AfterInstall:
+    - location: after_script.sh
+      timeout: 300
+      runas: ubuntu
+
+  ApplicationStart:
+    - location: start_server.sh
+      timeout: 300
+      runas: ubuntu
 
   ApplicationStop:
-    - location: scripts/after_scripts.sh
+    - location: stop_server.sh
       timeout: 300
-      runas: root
+      runas: ubuntu
