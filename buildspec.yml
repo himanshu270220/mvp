@@ -3,12 +3,13 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo "Checking if before_script.sh exists..."
-      - ls -l RAGHT2.0/ || { echo "RAGHT2.0/ directory missing"; exit 1; }
-      - echo "Setting execute permission for before_script.sh..."
-      - chmod +x RAGHT2.0/before_script.sh || { echo "Failed to set permissions"; exit 1; }
+      - echo "Checking available directories in build environment..."
+      - ls -l || echo "Root directory listing failed"
+      - echo "Ensuring target directory exists..."
+      - mkdir -p RAGHT2.0  # Create directory if it doesn't exist
+      - chmod +x before_script.sh || { echo "Failed to set permissions"; exit 1; }
       - echo "Running before_script.sh..."
-      - ./RAGHT2.0/before_script.sh || { echo "before_script.sh execution failed"; exit 1; }
+      - ./before_script.sh || { echo "before_script.sh execution failed"; exit 1; }
 
   build:
     commands:
@@ -21,12 +22,10 @@ phases:
 
   post_build:
     commands:
-      - echo "Checking if after_scripts.sh exists..."
-      - ls -l RAGHT2.0/ || { echo "RAGHT2.0/ directory missing"; exit 1; }
-      - echo "Setting execute permission for after_scripts.sh..."
-      - chmod +x RAGHT2.0/after_scripts.sh || { echo "Failed to set permissions"; exit 1; }
+      - echo "Ensuring after_scripts.sh is executable..."
+      - chmod +x after_scripts.sh || { echo "Failed to set permissions"; exit 1; }
       - echo "Running after_scripts.sh..."
-      - ./RAGHT2.0/after_scripts.sh || { echo "after_scripts.sh execution failed"; exit 1; }
+      - ./after_scripts.sh || { echo "after_scripts.sh execution failed"; exit 1; }
       - echo "Build and deployment steps completed."
 
 artifacts:
