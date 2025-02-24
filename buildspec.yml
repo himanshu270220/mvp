@@ -1,27 +1,27 @@
 version: 0.2
 
 phases:
-    pre_build:
+  pre_build:
     commands:
-      - echo "Listing all files in the workspace..."
-      - ls -l
-      - echo "Checking if after_script.sh exists..."
-      - ls -l after_script.sh || { echo "after_script.sh is missing!"; exit 1; }
+      - echo "Running pre-build phase..."
+      - chmod +x before_script.sh || { echo "Failed to set permissions for before_script.sh"; exit 1; }
+      - ./before_script.sh
 
   build:
     commands:
-      - echo "Activating virtual environment..."
-      - bash -c "source venv/bin/activate" || { echo "Failed to activate venv"; exit 1; }
+      - echo "Creating Python virtual environment..."
+      - python3 -m venv venv
+      - source venv/bin/activate || { echo "Failed to activate venv"; exit 1; }
       - echo "Installing dependencies..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
 
-    post_build:
+  post_build:
     commands:
-      - echo "Setting execute permission on after_script.sh..."
-      - chmod +x /var/www/html/RAGHT2.0/after_script.sh || { echo "Failed to set permissions"; exit 1; }
-      - echo "Executing after_script.sh..."
-      - /var/www/html/RAGHT2.0/after_script.sh
+      - echo "Running post-build phase..."
+      - chmod +x after_script.sh || { echo "Failed to set permissions for after_script.sh"; exit 1; }
+      - ./after_script.sh
+      - echo "Build and deployment steps completed."
 
 artifacts:
   files:
