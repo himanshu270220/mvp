@@ -4,14 +4,17 @@ phases:
   pre_build:
     commands:
       - echo "Running pre-build phase..."
+      - echo "Current directory: $(pwd)"
+      - echo "Files in directory: $(ls -la)"
       - chmod +x before_script.sh || { echo "Failed to set permissions for before_script.sh"; exit 1; }
       - ./before_script.sh
 
   build:
     commands:
       - echo "Creating Python virtual environment..."
-      - python3 -m venv venv
-      - source venv/bin/activate || { echo "Failed to activate venv"; exit 1; }
+      - python3 -m venv venv || { echo "Failed to create virtual environment"; exit 1; }
+      - ls -la venv/bin/activate || { echo "Virtual environment not created"; exit 1; }
+      - source ./venv/bin/activate || { echo "Failed to activate virtual environment"; exit 1; }
       - echo "Installing dependencies..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
@@ -19,6 +22,7 @@ phases:
   post_build:
     commands:
       - echo "Running post-build phase..."
+      - ls -la after_script.sh || { echo "after_script.sh not found"; exit 1; }
       - chmod +x after_script.sh || { echo "Failed to set permissions for after_script.sh"; exit 1; }
       - ./after_script.sh
       - echo "Build and deployment steps completed."
