@@ -4,8 +4,6 @@ phases:
   pre_build:
     commands:
       - echo "Running pre-build phase..."
-      - echo "Current directory: $(pwd)"
-      - echo "Files in directory: $(ls -la)"
       - chmod +x before_script.sh || { echo "Failed to set permissions for before_script.sh"; exit 1; }
       - ./before_script.sh
 
