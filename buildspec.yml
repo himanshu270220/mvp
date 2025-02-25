@@ -4,6 +4,8 @@ phases:
   pre_build:
     commands:
       - echo "Running pre-build phase..."
+      - echo "Current directory: $(pwd)"
+      - echo "Files in directory: $(ls -la)"
       - chmod +x before_script.sh || { echo "Failed to set permissions for before_script.sh"; exit 1; }
       - ./before_script.sh
 
@@ -20,6 +22,8 @@ phases:
   post_build:
     commands:
       - echo "Running post-build phase..."
+      - echo "Current directory: $(pwd)"
+      - echo "Files in directory: $(ls -la)"
       - ls -la after_script.sh || { echo "after_script.sh not found"; exit 1; }
       - chmod +x after_script.sh || { echo "Failed to set permissions for after_script.sh"; exit 1; }
       - ./after_script.sh
